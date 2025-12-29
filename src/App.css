@@ -1,42 +1,53 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* App.css - Stili personalizzati Votopia */
+
+/* Animazioni personalizzate */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+@keyframes slide-in-from-right-5 {
+    from {
+        transform: translateX(1.25rem);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes slide-in-from-left-5 {
+    from {
+        transform: translateX(-1.25rem);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.animate-in {
+    animation-fill-mode: both;
 }
 
-.card {
-  padding: 2em;
+.fade-in {
+    animation: fade-in 0.3s ease-in-out;
 }
 
-.read-the-docs {
-  color: #888;
+.slide-in-from-right-5 {
+    animation: slide-in-from-right-5 0.4s ease-out;
+}
+
+.slide-in-from-left-5 {
+    animation: slide-in-from-left-5 0.4s ease-out;
+}
+
+.duration-400 {
+    animation-duration: 400ms;
 }
