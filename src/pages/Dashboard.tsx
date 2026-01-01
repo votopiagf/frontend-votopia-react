@@ -20,24 +20,28 @@ export default function Dashboard() {
             title: 'Statistiche',
             description: 'Visualizza le statistiche delle votazioni',
             color: 'bg-blue-500',
+            path: '/statistiche',
         },
         {
             icon: Users,
             title: 'Utenti',
             description: 'Gestisci gli utenti dell\'organizzazione',
             color: 'bg-green-500',
+            path: '/utenti',
         },
         {
             icon: FileText,
             title: 'Votazioni',
             description: 'Crea e gestisci le votazioni',
             color: 'bg-purple-500',
+            path: '/votazioni',
         },
         {
             icon: Settings,
             title: 'Impostazioni',
             description: 'Configura le impostazioni del sistema',
             color: 'bg-orange-500',
+            path: '/impostazioni',
         },
     ];
 
@@ -148,6 +152,7 @@ export default function Dashboard() {
                             return (
                                 <button
                                     key={index}
+                                    onClick={() => navigate(feature.path)}
                                     className="group rounded-lg bg-white p-6 shadow-sm transition-all hover:shadow-md"
                                     data-testid={`feature-${index}`}
                                 >

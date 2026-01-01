@@ -25,12 +25,11 @@ export interface OrganizationCheckPayload {
 export interface LoginPayload {
     email: string;
     password: string;
-    organizationCode: string;
+    codeOrg: string;
 }
 
 // Risposta del login
 export interface LoginResponse {
     token: string;
-    user: User;
-    organization: Organization;
+    userSummaryDto: User;
 }

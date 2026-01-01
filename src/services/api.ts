@@ -12,24 +12,61 @@ export const api = axios.create({
     },
 });
 
-// Interceptor per aggiungere token alle richieste
+// Interceptor per aggiungere token alle richieste e logging
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('authToken');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // Log della richiesta
+        console.group(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+        console.log('📍 Full URL:', `${config.baseURL}${config.url}`);
+        console.log('🔑 Headers:', config.headers);
+        if (config.data) {
+            console.log('📦 Request Data:', config.data);
+        }
+        if (config.params) {
+            console.log('🔍 Query Params:', config.params);
+        }
+        console.log('⏰ Timestamp:', new Date().toISOString());
+        console.groupEnd();
+
         return config;
     },
-    (error) => Promise.reject(error)
+    (error) => {
+        console.error('❌ Request Error:', error);
+        return Promise.reject(error);
+    }
 );
 
-// Interceptor per gestire errori globali
+// Interceptor per gestire errori globali e logging delle risposte
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Log della risposta di successo
+        console.group(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`);
+        console.log('📊 Status:', response.status, response.statusText);
+        console.log('📦 Response Data:', response.data);
+        console.log('⏰ Timestamp:', new Date().toISOString());
+        console.log('⏱️ Duration:', response.config.headers ? 'Request completed' : '');
+        console.groupEnd();
+
+        return response;
+    },
     (error: AxiosError<ErrorResponse>) => {
+        // Log dettagliato dell'errore
+        console.group(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
+        console.error('🔴 Error Status:', error.response?.status);
+        console.error('🔴 Error Message:', error.response?.data?.message || error.message);
+        console.error('🔴 Error Data:', error.response?.data);
+        console.error('🔴 Full Error:', error);
+        console.log('⏰ Timestamp:', new Date().toISOString());
+        console.groupEnd();
+
         if (error.response?.status === 401) {
             // Token scaduto o non valido
+            console.warn('⚠️ Unauthorized - Redirecting to login...');
             localStorage.removeItem('authToken');
             window.location.href = '/login';
         }
