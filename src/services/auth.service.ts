@@ -4,15 +4,15 @@ import type {
     LoginPayload,
     LoginResponse,
 } from '@/types/auth.types';
-import type {SuccessResponse} from '@/types/api.types';
+import type {ApiResponse} from '@/types/api.types';
 
 class AuthService {
     // Verifica esistenza organizzazione
     async checkOrganization(
         organization_code: string
-    ): Promise<SuccessResponse<Organization>> {
+    ): Promise<ApiResponse<Organization>> {
         console.log('🏢 Checking organization with code:', organization_code);
-        const response = await api.get<SuccessResponse<Organization>>(
+        const response = await api.get<ApiResponse<Organization>>(
             '/api/organizations/by-code/',
             {
                 params: {organization_code}
@@ -27,20 +27,33 @@ class AuthService {
         email: string,
         password: string,
         codeOrg: string
-    ): Promise<SuccessResponse<LoginResponse>> {
+    ): Promise<ApiResponse<LoginResponse>> {
         console.log('🔐 Attempting login for user:', email, 'in organization:', codeOrg);
         const payload: LoginPayload = { email, password, codeOrg };
-        const response = await api.post<SuccessResponse<LoginResponse>>(
+        const response = await api.post<ApiResponse<LoginResponse>>(
             '/api/auth/login/',
             payload
         );
 
         // Salva token in localStorage
-        if (response.data.success && response.data.data.token) {
-            console.log('✅ Login successful, saving auth data...');
-            localStorage.setItem('authToken', response.data.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.data.userSummaryDto));
-            console.log('✅ User logged in:', response.data.data.userSummaryDto.email);
+        if (response.data.success) {
+            console.log('✅ Login successful!');
+            console.log('💡 Full login response:', response.data);
+            console.log('Response data:', response.data.data);
+
+            const data = response.data.data;
+
+            if (data?.token) {
+                localStorage.setItem('authToken', data.token);
+            }
+
+            if (data?.userSummaryDto) {
+                localStorage.setItem('user', JSON.stringify(data.userSummaryDto));
+                console.log('✅ User logged in:', data.userSummaryDto.email);
+            } else {
+                console.warn('⚠️ User summary is missing in response!');
+                localStorage.removeItem('user'); // pulizia sicura
+            }
         } else {
             console.error('❌ Login failed:', response.data.message);
         }

@@ -1,35 +1,50 @@
-// Tipo per l'organizzazione
+// Types per autenticazione - uso interno frontend
+
+// Types per autenticazione - uso interno frontend
+import type {UserSummary} from '@/types/user.types';
+
+export interface LoginRequest {
+    codeOrg: string;
+    email: string;
+    password: string;
+}
+
+export interface LoginSummary {
+    token: string;
+    userSummaryDto?: UserSummary;
+}
+
+export interface AuthState {
+    isAuthenticated: boolean;
+    token: string | null;
+    user: UserSummary | null;
+    loading: boolean;
+    error: string | null;
+}
+
+// Aliases per compatibilità con codice esistente
+export type LoginPayload = LoginRequest;
+export type LoginResponse = LoginSummary;
+
+// Tipo Organization per compatibilità
 export interface Organization {
-    id: string;
+    id: number;
     code: string;
     name: string;
     description?: string;
 }
 
-// Tipo per l'utente
+// Tipo User per compatibilità (semplificato)
 export interface User {
-    id: string;
+    id: number;
     email: string;
     firstName: string;
     lastName: string;
     role: string;
-    organizationId: string;
+    organizationId: number;
 }
 
 // Payload per la verifica organizzazione
 export interface OrganizationCheckPayload {
     code: string;
-}
-
-// Payload per il login
-export interface LoginPayload {
-    email: string;
-    password: string;
-    codeOrg: string;
-}
-
-// Risposta del login
-export interface LoginResponse {
-    token: string;
-    userSummaryDto: User;
 }

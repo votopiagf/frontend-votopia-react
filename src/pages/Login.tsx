@@ -6,7 +6,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import authService from '@/services/auth.service';
 import type {Organization} from '@/types/auth.types';
 import { AxiosError } from 'axios';
-import type {ErrorResponse} from '@/types/api.types.ts';
+import type {ErrorResponse} from '@/types/common.types';
 
 // Importa loghi
 import votopiaIcon from '@/assets/icon.png';

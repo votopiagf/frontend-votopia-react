@@ -1,37 +1,51 @@
-import type {SchoolSummary} from "@/types/school.types";
+// Types per List - uso interno frontend
 
-export interface ListBasic{
-    id: bigint;
-    name: string;
-    description: string;
-}
+// Types per List - uso interno frontend
+import type {FileSummary} from '@/types/file.types';
+import type { SchoolSummary } from '@/types/school.types';
 
-export interface ListCreate{
+export interface ListCreate {
     name: string;
     description?: string;
     slogan?: string;
     colorPrimary?: string;
     colorSecondary?: string;
-    logoFileId: bigint;
+    logoFileId?: number;
 }
 
-export interface ListSummary{
-    id: bigint;
-    name: string;
-    school: SchoolSummary;
-    description: string;
-    slogan: string;
-    colorPrimary: string;
-    colorSecondary: string;
-    logoFileId: string //TODO;
-}
-
-export interface ListUpdate{
-    id: bigint;
+export interface ListUpdate {
+    listId: number;
     name?: string;
     description?: string;
     slogan?: string;
     colorPrimary?: string;
     colorSecondary?: string;
-    logoFileId?: bigint;
+    logoFileId?: number;
+}
+
+export interface ListDetail {
+    id: number;
+    name: string;
+    description: string;
+    school: SchoolSummary;
+    slogan: string;
+    colorPrimary: string;
+    colorSecondary: string;
+    file: FileSummary;
+    createdAt: Date;
+}
+
+export interface ListSummary {
+    id: number;
+    name: string;
+    school: SchoolSummary | null;
+    slogan: string;
+    logoFile: FileSummary | null;
+}
+
+export interface ListState {
+    lists: ListSummary[];
+    selectedList: ListDetail | null;
+    loading: boolean;
+    error: string | null;
 }

@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
-import type {ErrorResponse} from '@/types/api.types';
+import type {ApiResponse} from '@/types/api.types';
+import type {ErrorResponse} from "@/types";
 
 // URL base del backend (usa variabile d'ambiente se disponibile)
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -54,7 +55,7 @@ api.interceptors.response.use(
 
         return response;
     },
-    (error: AxiosError<ErrorResponse>) => {
+    (error: AxiosError<ApiResponse<ErrorResponse>>) => {
         // Log dettagliato dell'errore
         console.group(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
         console.error('🔴 Error Status:', error.response?.status);
