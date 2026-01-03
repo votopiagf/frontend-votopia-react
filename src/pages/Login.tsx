@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Mail, Lock, ArrowRight, ArrowLeft, LogIn } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import {ActionButton} from '@/components/ui/action-button';
 import authService from '@/services/auth.service';
 import type {Organization} from '@/types/auth.types';
 import { AxiosError } from 'axios';
@@ -62,7 +62,7 @@ export default function Login() {
 
             if (response.success) {
                 // Redirect alla dashboard
-                navigate('/dashboard');
+                navigate('/users');
             } else {
                 setError(response.message || 'Credenziali non valide');
             }
@@ -142,14 +142,14 @@ export default function Login() {
                                         </div>
                                     )}
 
-                                    <PrimaryButton
+                                    <ActionButton
                                         data-testid="organization-submit-button"
                                         type="submit"
                                         icon={ArrowRight}
                                         isLoading={isLoading}
                                     >
                                         Avanti
-                                    </PrimaryButton>
+                                    </ActionButton>
                                 </form>
                             </div>
                         ) : (
@@ -227,14 +227,14 @@ export default function Login() {
                                         </div>
                                     )}
 
-                                    <PrimaryButton
+                                    <ActionButton
                                         data-testid="login-submit-button"
                                         type="submit"
                                         icon={LogIn}
                                         isLoading={isLoading}
                                     >
                                         Accedi
-                                    </PrimaryButton>
+                                    </ActionButton>
                                 </form>
                             </div>
                         )}

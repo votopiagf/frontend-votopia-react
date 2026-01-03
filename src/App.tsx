@@ -1,14 +1,16 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from '@/pages/Login';
-import Dashboard from '@/pages/Dashboard';
-import Profile from '@/pages/Profile';
-import Votazioni from '@/pages/Votazioni';
-import Utenti from '@/pages/Utenti';
-import Statistiche from '@/pages/Statistiche';
-import Impostazioni from '@/pages/Impostazioni';
+import Dashboard from '@/pages/test/Dashboard';
+import Profile from '@/pages/test/Profile';
+import Votazioni from '@/pages/test/Votazioni';
+import Utenti from '@/pages/test/Utenti';
+import Statistiche from '@/pages/test/Statistiche';
+import Impostazioni from '@/pages/test/Impostazioni';
 import NotFound from '@/pages/NotFound';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import Users from '@/pages/Users';
 import authService from '@/services/auth.service';
+
 
 function App() {
     const isAuthenticated = authService.isAuthenticated();
@@ -77,6 +79,14 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Impostazioni />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/users"
+                    element={
+                        <ProtectedRoute>
+                            <Users organizationName={""} />
                         </ProtectedRoute>
                     }
                 />

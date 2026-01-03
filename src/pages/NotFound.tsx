@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Home, Search } from 'lucide-react';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { ActionButton } from '@/components/ui/action-button';
 
 export default function NotFound() {
     const navigate = useNavigate();
@@ -25,14 +25,14 @@ export default function NotFound() {
 
                 <div className="flex justify-center">
                     <div className="w-full max-w-xs">
-                        <PrimaryButton
+                        <ActionButton
                             data-testid="home-button"
                             onClick={() => navigate('/')}
                             icon={Home}
                             className="bg-white text-[#1A3A82] hover:bg-gray-100"
                         >
                             Torna alla Home
-                        </PrimaryButton>
+                        </ActionButton>
                     </div>
                 </div>
             </div>
