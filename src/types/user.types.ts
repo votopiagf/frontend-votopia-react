@@ -49,3 +49,8 @@ export interface UserState {
     loading: boolean;
     error: string | null;
 }
+
+export const displayNameFromDetail = (u: UserDetail): string => {
+    const full = `${u.name ?? ''} ${u.surname ?? ''}`.trim();
+    return full || u.email;
+};

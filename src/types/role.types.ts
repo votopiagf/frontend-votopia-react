@@ -33,7 +33,7 @@ export interface RoleDetail {
 
 export interface RoleSummary {
     id: number;
-    list: ListSummary;
+    list?: ListSummary | null;
     name: string;
     color: string;
 }

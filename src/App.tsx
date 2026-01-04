@@ -10,6 +10,10 @@ import NotFound from '@/pages/NotFound';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Users from '@/pages/Users';
 import authService from '@/services/auth.service';
+import Roles from "@/pages/Roles";
+import Lists from "@/pages/Lists";
+import Files from "@/pages/Files";
+import ListsMenu from "@/pages/ListsMenu";
 
 
 function App() {
@@ -86,7 +90,43 @@ function App() {
                     path="/users"
                     element={
                         <ProtectedRoute>
-                            <Users organizationName={""} />
+                            <Users />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/roles"
+                    element={
+                        <ProtectedRoute>
+                            <Roles />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/lists"
+                    element={
+                        <ProtectedRoute>
+                            <Lists />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/files"
+                    element={
+                        <ProtectedRoute>
+                            <Files />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/lists-menu"
+                    element={
+                        <ProtectedRoute>
+                            <ListsMenu />
                         </ProtectedRoute>
                     }
                 />
