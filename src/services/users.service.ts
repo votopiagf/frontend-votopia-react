@@ -1,61 +1,126 @@
-// Mocked user service - pattern: export const userService = { getAll, deleteById, deleteMany, create, update }
-// Questo file è intenzionalmente semplice e mantiene lo stato in memoria per scopi di sviluppo/local.
+import api from './api';
+import type { ApiResponse } from '@/types/api.types';
+import type {
+    UserCreateDto,
+    UserUpdateDto,
+    UserDetailDto,
+    UserSummaryDto
+} from '@/types/dtos/user.dto';
 
-import { User } from "@/pages/Users"; // se la tua configurazione TS non permette questo import, ricopia l'interfaccia User qui.
+class UserService {
+    private readonly baseUrl = '/api/users';
 
-type UserLocal = {
-    id: string;
-    name: string;
-    email: string;
-    roles: string;
-    lists: string;
-    initials: string;
-};
-
-// In-memory store (simula DB)
-let usersDB: UserLocal[] = [
-    { id: '1', name: 'Mario Rossi', email: 'mario.rossi@example.com', roles: 'Admin, Editor', lists: 'Main List', initials: 'MR' },
-    { id: '2', name: 'Giulia Bianchi', email: 'giulia.b@example.com', roles: 'Viewer', lists: 'Newsletter', initials: 'GB' },
-    { id: '3', name: 'Luca Verdi', email: 'luca.verdi@example.com', roles: 'Moderator', lists: 'Events', initials: 'LV' },
-];
-
-// utilità per delay simulato
-const delay = (ms = 400) => new Promise(resolve => setTimeout(resolve, ms));
-
-export const userService = {
-    async getAll(): Promise<UserLocal[]> {
-        await delay(300);
-        // restituisci copia per evitare leak di riferimento
-        return usersDB.map(u => ({ ...u }));
-    },
-
-    async deleteById(id: string): Promise<void> {
-        await delay(300);
-        usersDB = usersDB.filter(u => u.id !== id);
-    },
-
-    async deleteMany(ids: string[]): Promise<void> {
-        await delay(400);
-        const set = new Set(ids);
-        usersDB = usersDB.filter(u => !set.has(u.id));
-    },
-
-    async create(payload: Omit<UserLocal, 'id'>): Promise<UserLocal> {
-        await delay(300);
-        const newUser: UserLocal = {
-            id: (Date.now() + Math.floor(Math.random() * 1000)).toString(),
-            ...payload
-        };
-        usersDB = [newUser, ...usersDB];
-        return { ...newUser };
-    },
-
-    async update(id: string, payload: Partial<UserLocal>): Promise<UserLocal> {
-        await delay(300);
-        usersDB = usersDB.map(u => u.id === id ? { ...u, ...payload } : u);
-        const user = usersDB.find(u => u.id === id)!;
-        return { ...user };
+    // Get all users
+    async getAll(): Promise<UserDetailDto[]> {
+        const response = await api.get<ApiResponse<UserDetailDto[]>>(this.baseUrl);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch users');
     }
-};
 
+    // Get user by ID
+    async getById(id: number): Promise<UserDetailDto> {
+        const response = await api.get<ApiResponse<UserDetailDto>>(`${this.baseUrl}/${id}`);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch user');
+    }
+
+    // Get user by email
+    async getByEmail(email: string): Promise<UserDetailDto> {
+        const response = await api.get<ApiResponse<UserDetailDto>>(`${this.baseUrl}/by-email`, {
+            params: { email }
+        });
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch user by email');
+    }
+
+    // Get users by list ID
+    async getByListId(listId: number): Promise<UserSummaryDto[]> {
+        const response = await api.get<ApiResponse<UserSummaryDto[]>>(`${this.baseUrl}/list/${listId}`);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch users by list');
+    }
+
+    // Create new user
+    async create(payload: UserCreateDto): Promise<UserDetailDto> {
+        const response = await api.post<ApiResponse<UserDetailDto>>(this.baseUrl, payload);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to create user');
+    }
+
+    // Update user
+    async update(id: number, payload: Partial<UserUpdateDto>): Promise<UserDetailDto> {
+        const response = await api.put<ApiResponse<UserDetailDto>>(`${this.baseUrl}/${id}`, {
+            ...payload,
+            id
+        });
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to update user');
+    }
+
+    // Delete user by ID
+    async deleteById(id: number): Promise<void> {
+        const response = await api.delete<ApiResponse<void>>(`${this.baseUrl}/${id}`);
+        if (!response.data.success) {
+            throw new Error(response.data.message || 'Failed to delete user');
+        }
+    }
+
+    // Delete multiple users
+    async deleteMany(ids: number[]): Promise<void> {
+        const response = await api.post<ApiResponse<void>>(`${this.baseUrl}/delete-many`, { ids });
+        if (!response.data.success) {
+            throw new Error(response.data.message || 'Failed to delete users');
+        }
+    }
+
+    // Add user to lists
+    async addToLists(userId: number, listIds: number[]): Promise<UserDetailDto> {
+        const response = await api.put<ApiResponse<UserDetailDto>>(`${this.baseUrl}/${userId}`, {
+            id: userId,
+            addLists: listIds
+        });
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to add user to lists');
+    }
+
+    // Remove user from lists
+    async removeFromLists(userId: number, listIds: number[]): Promise<UserDetailDto> {
+        const response = await api.put<ApiResponse<UserDetailDto>>(`${this.baseUrl}/${userId}`, {
+            id: userId,
+            removeLists: listIds
+        });
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to remove user from lists');
+    }
+
+    // Reset user password
+    async resetPassword(userId: number): Promise<UserDetailDto> {
+        const response = await api.put<ApiResponse<UserDetailDto>>(`${this.baseUrl}/${userId}`, {
+            id: userId,
+            resetPassword: true
+        });
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to reset password');
+    }
+}
+
+export const userService = new UserService();
 export default userService;

@@ -1,160 +1,133 @@
-// Mocked role service - pattern: export const roleService = { getAll, getById, create, update, deleteById, addPermission, removePermission, getLists }
-// Stato in-memory per sviluppo locale.
+import api from './api';
+import type { ApiResponse } from '@/types/api.types';
+import type {
+    RoleCreateDto,
+    RoleUpdateDto,
+    RoleDetailDto,
+    RoleSummaryDto,
+    RoleInfoResponse
+} from '@/types/dtos/role.dto';
+import type { ListSummaryDto } from '@/types/dtos/list.dto';
+import type { PermissionSummaryDto } from '@/types/dtos/permission.dto';
 
-import type { RoleDetail, ListSummary, PermissionSummary } from "@/pages/Roles";
+class RoleService {
+    private readonly baseUrl = '/api/roles';
 
-// Liste esempio (per ruoli di lista)
-let listsDB: ListSummary[] = [
-    { id: 1, name: "Main List" },
-    { id: 2, name: "Newsletter" },
-    { id: 3, name: "Events" },
-    { id: 4, name: "Marketing" },
-];
+    // Get all roles
+    async getAll(): Promise<RoleDetailDto[]> {
+        const response = await api.get<ApiResponse<RoleDetailDto[]>>(this.baseUrl);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch roles');
+    }
 
-// utilità delay simulato
-const delay = (ms = 300) => new Promise((res) => setTimeout(res, ms));
+    // Get role by ID
+    async getById(id: number): Promise<RoleDetailDto> {
+        const response = await api.get<ApiResponse<RoleDetailDto>>(`${this.baseUrl}/${id}`);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch role');
+    }
 
-// Ruoli iniziali mockati (organizzazione e lista)
-let rolesDB: RoleDetail[] = [
-    {
-        id: 1,
-        list: null, // ruolo di organizzazione
-        name: "Super Admin",
-        color: "#1e293b",
-        level: 999,
-        permissions: [
-            { id: 1, name: "manage_all" },
-            { id: 2, name: "manage_users" },
-            { id: 3, name: "manage_roles" },
-        ],
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
-    },
-    {
-        id: 2,
-        list: null,
-        name: "Admin",
-        color: "#0ea5a4",
-        level: 900,
-        permissions: [
-            { id: 4, name: "manage_users" },
-            { id: 5, name: "view_reports" },
-        ],
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20),
-    },
-    {
-        id: 3,
-        list: { id: 1, name: "Main List" },
-        name: "Main Moderator",
-        color: "#065f46",
-        level: 200,
-        permissions: [
-            { id: 6, name: "moderate_posts" },
-            { id: 7, name: "pin_posts" },
-        ],
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
-    },
-    {
-        id: 4,
-        list: { id: 2, name: "Newsletter" },
-        name: "Newsletter Editor",
-        color: "#7c3aed",
-        level: 150,
-        permissions: [
-            { id: 8, name: "edit_newsletter" },
-            { id: 9, name: "send_newsletter" },
-        ],
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-    },
-];
+    // Get roles by list ID
+    async getByListId(listId: number): Promise<RoleSummaryDto[]> {
+        const response = await api.get<ApiResponse<RoleSummaryDto[]>>(`${this.baseUrl}/list/${listId}`);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch roles by list');
+    }
 
-// contatori per id
-let nextRoleId = 10;
-let nextPermId = 100;
+    // Get roles by organization ID
+    async getByOrganizationId(organizationId: number): Promise<RoleSummaryDto[]> {
+        const response = await api.get<ApiResponse<RoleSummaryDto[]>>(`${this.baseUrl}/organization/${organizationId}`);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch roles by organization');
+    }
 
-// Export del servizio mockato
-export const roleService = {
-    async getAll(): Promise<RoleDetail[]> {
-        await delay();
-        // ritorna copia per evitare mutazioni esterne
-        return rolesDB.map((r) => ({ ...r, permissions: r.permissions.map((p) => ({ ...p })) }));
-    },
+    // Get role info (roles with user roles count)
+    async getRoleInfo(): Promise<RoleInfoResponse> {
+        const response = await api.get<ApiResponse<RoleInfoResponse>>(`${this.baseUrl}/info`);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch role info');
+    }
 
-    async getById(id: number): Promise<RoleDetail | null> {
-        await delay();
-        const r = rolesDB.find((x) => x.id === id);
-        return r ? { ...r, permissions: r.permissions.map((p) => ({ ...p })) } : null;
-    },
+    // Create new role
+    async create(payload: RoleCreateDto): Promise<RoleDetailDto> {
+        const response = await api.post<ApiResponse<RoleDetailDto>>(this.baseUrl, payload);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to create role');
+    }
 
-    async getLists(): Promise<ListSummary[]> {
-        await delay();
-        return listsDB.map((l) => ({ ...l }));
-    },
-
-    async create(payload: Omit<RoleDetail, "id" | "createdAt">): Promise<RoleDetail> {
-        await delay(350);
-        const newRole: RoleDetail = {
-            id: nextRoleId++,
+    // Update role
+    async update(id: number, payload: Partial<RoleUpdateDto>): Promise<RoleDetailDto> {
+        const response = await api.put<ApiResponse<RoleDetailDto>>(`${this.baseUrl}/${id}`, {
             ...payload,
-            createdAt: new Date(),
-        };
-        rolesDB = [newRole, ...rolesDB];
-        return { ...newRole, permissions: newRole.permissions.map((p) => ({ ...p })) };
-    },
+            id
+        });
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to update role');
+    }
 
-    async update(id: number, payload: Partial<Omit<RoleDetail, "createdAt">>): Promise<RoleDetail> {
-        await delay(300);
-        rolesDB = rolesDB.map((r) => (r.id === id ? { ...r, ...payload } : r));
-        const r = rolesDB.find((x) => x.id === id)!;
-        return { ...r, permissions: r.permissions.map((p) => ({ ...p })) };
-    },
-
+    // Delete role
     async deleteById(id: number): Promise<void> {
-        await delay(250);
-        rolesDB = rolesDB.filter((r) => r.id !== id);
-    },
+        const response = await api.delete<ApiResponse<void>>(`${this.baseUrl}/${id}`);
+        if (!response.data.success) {
+            throw new Error(response.data.message || 'Failed to delete role');
+        }
+    }
 
-    async addPermission(roleId: number, perm: PermissionSummary): Promise<RoleDetail> {
-        await delay(250);
-        const newPerm = { id: nextPermId++, ...perm };
-        rolesDB = rolesDB.map((r) => (r.id === roleId ? { ...r, permissions: [...r.permissions, newPerm] } : r));
-        const r = rolesDB.find((x) => x.id === roleId)!;
-        return { ...r, permissions: r.permissions.map((p) => ({ ...p })) };
-    },
+    // Add permissions to role
+    async addPermissions(roleId: number, permissionIds: number[]): Promise<RoleDetailDto> {
+        const response = await api.put<ApiResponse<RoleDetailDto>>(`${this.baseUrl}/${roleId}`, {
+            id: roleId,
+            permissions: permissionIds
+        });
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to add permissions');
+    }
 
-    async removePermission(roleId: number, permId: number): Promise<RoleDetail> {
-        await delay(250);
-        rolesDB = rolesDB.map((r) => (r.id === roleId ? { ...r, permissions: r.permissions.filter((p) => p.id !== permId) } : r));
-        const r = rolesDB.find((x) => x.id === roleId)!;
-        return { ...r, permissions: r.permissions.map((p) => ({ ...p })) };
-    },
+    // Remove permission from role
+    async removePermission(roleId: number, permissionId: number): Promise<RoleDetailDto> {
+        const response = await api.delete<ApiResponse<RoleDetailDto>>(
+            `${this.baseUrl}/${roleId}/permission/${permissionId}`
+        );
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to remove permission');
+    }
 
-    // helper per testing/dev: reset dati al mock iniziale
-    async _resetMock(): Promise<void> {
-        await delay(100);
-        listsDB = [
-            { id: 1, name: "Main List" },
-            { id: 2, name: "Newsletter" },
-            { id: 3, name: "Events" },
-            { id: 4, name: "Marketing" },
-        ];
-        rolesDB = [
-            {
-                id: 1,
-                list: null,
-                name: "Super Admin",
-                color: "#1e293b",
-                level: 999,
-                permissions: [
-                    { id: 1, name: "manage_all" },
-                    { id: 2, name: "manage_users" },
-                    { id: 3, name: "manage_roles" },
-                ],
-                createdAt: new Date(),
-            },
-        ];
-        nextRoleId = 10;
-        nextPermId = 100;
-    },
-};
+    // Get available lists for role assignment
+    async getLists(): Promise<ListSummaryDto[]> {
+        const response = await api.get<ApiResponse<ListSummaryDto[]>>('/api/lists');
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch lists');
+    }
 
+    // Get available permissions
+    async getPermissions(): Promise<PermissionSummaryDto[]> {
+        const response = await api.get<ApiResponse<PermissionSummaryDto[]>>('/api/permissions');
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch permissions');
+    }
+}
+
+export const roleService = new RoleService();
 export default roleService;
