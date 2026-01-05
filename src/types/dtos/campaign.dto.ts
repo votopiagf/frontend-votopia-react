@@ -32,3 +32,15 @@ export interface CampaignAddCandidateDto {
     positionInList?: number;
     positonId?: number;
 }
+
+export interface CampaignResultsDto {
+    campaignId: number;
+    campaignName: string;
+    totalVotes: number;
+    results: Array<{
+        candidateId: number;
+        candidateName: string;
+        votes: number;
+        percentage: number;
+    }>;
+}

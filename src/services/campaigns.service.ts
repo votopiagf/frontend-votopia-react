@@ -4,7 +4,8 @@ import type {
     CampaignCreateDto,
     CampaignUpdateDto,
     CampaignSummaryDto,
-    CampaignAddCandidateDto
+    CampaignAddCandidateDto,
+    CampaignResultsDto
 } from '@/types/dtos/campaign.dto';
 
 class CampaignService {
@@ -101,8 +102,8 @@ class CampaignService {
     }
 
     // Get campaign results
-    async getResults(id: number): Promise<any> {
-        const response = await api.get<ApiResponse<any>>(`${this.baseUrl}/${id}/results`);
+    async getResults(id: number): Promise<CampaignResultsDto> {
+        const response = await api.get<ApiResponse<CampaignResultsDto>>(`${this.baseUrl}/${id}/results`);
         if (response.data.success) {
             return response.data.data;
         }
