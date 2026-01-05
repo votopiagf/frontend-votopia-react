@@ -1,129 +1,138 @@
-// Mocked lists service - pattern: export const listsService = { getAll, getById, create, update, deleteById, getSchools, uploadFile, _resetMock }
-// Stato in-memory per sviluppo locale.
+import api from './api';
+import type { ApiResponse } from '@/types/api.types';
+import type {
+    ListCreateDto,
+    ListUpdateDto,
+    ListDetailDto,
+    ListSummaryDto
+} from '@/types/dtos/list.dto';
+import type { SchoolSummaryDto } from '@/types/dtos/school.dto';
+import type { UserSummaryDto } from '@/types/dtos/user.dto';
 
-import type { ListDetail, SchoolSummary, FileSummary } from "@/pages/Lists";
+class ListService {
+    private readonly baseUrl = '/api/lists';
 
-// schools mock
-let schoolsDB: SchoolSummary[] = [
-    { id: 1, name: "Liceo Scientifico A" },
-    { id: 2, name: "Istituto Tecnico B" },
-    { id: 3, name: "Scuola Media C" },
-];
-
-// files mock (semplice)
-let filesDB: FileSummary[] = [
-    { id: 1, name: "logo-main.png", url: "/mocks/logo-main.png", size: 12345 },
-    { id: 2, name: "hero.jpg", url: "/mocks/hero.jpg", size: 45678 },
-];
-
-// lists mock
-let listsDB: ListDetail[] = [
-    {
-        id: 1,
-        name: "Main List",
-        description: "Lista principale del progetto",
-        school: { id: 1, name: "Liceo Scientifico A" },
-        slogan: "Insieme per imparare",
-        colorPrimary: "#0ea5a4",
-        colorSecondary: "#ffffff",
-        file: filesDB[0],
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
-    },
-    {
-        id: 2,
-        name: "Newsletter",
-        description: "Lista per comunicazioni",
-        school: { id: 2, name: "Istituto Tecnico B" },
-        slogan: "Notizie e aggiornamenti",
-        colorPrimary: "#7c3aed",
-        colorSecondary: "#ffffff",
-        file: filesDB[1],
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-    },
-];
-
-// id counters
-let nextListId = 10;
-let nextFileId = 100;
-
-const delay = (ms = 300) => new Promise(res => setTimeout(res, ms));
-
-export const listsService = {
-    async getAll(): Promise<ListDetail[]> {
-        await delay();
-        return listsDB.map(l => ({ ...l, file: l.file ? { ...l.file } : undefined }));
-    },
-
-    async getById(id: number): Promise<ListDetail | null> {
-        await delay();
-        const l = listsDB.find(x => x.id === id);
-        return l ? { ...l, file: l.file ? { ...l.file } : undefined } : null;
-    },
-
-    async getSchools(): Promise<SchoolSummary[]> {
-        await delay();
-        return schoolsDB.map(s => ({ ...s }));
-    },
-
-    async create(payload: Omit<ListDetail, "id" | "createdAt">): Promise<ListDetail> {
-        await delay(350);
-        const newItem: ListDetail = {
-            id: nextListId++,
-            ...payload,
-            createdAt: new Date(),
-        };
-        listsDB = [newItem, ...listsDB];
-        return { ...newItem, file: newItem.file ? { ...newItem.file } : undefined };
-    },
-
-    async update(id: number, payload: Partial<Omit<ListDetail, "createdAt">>): Promise<ListDetail> {
-        await delay(300);
-        listsDB = listsDB.map(l => l.id === id ? { ...l, ...payload } as ListDetail : l);
-        const r = listsDB.find(x => x.id === id)!;
-        return { ...r, file: r.file ? { ...r.file } : undefined };
-    },
-
-    async deleteById(id: number): Promise<void> {
-        await delay(250);
-        listsDB = listsDB.filter(l => l.id !== id);
-    },
-
-    async uploadFile(listId: number, file: { name: string; size?: number }): Promise<FileSummary> {
-        await delay(400);
-        const f: FileSummary = { id: nextFileId++, name: file.name, url: `/mocks/${file.name}`, size: file.size || 0 };
-        filesDB.push(f);
-        listsDB = listsDB.map(l => l.id === listId ? { ...l, file: f } : l);
-        return { ...f };
-    },
-
-    // helper per sviluppo/test
-    async _resetMock(): Promise<void> {
-        await delay(100);
-        schoolsDB = [
-            { id: 1, name: "Liceo Scientifico A" },
-            { id: 2, name: "Istituto Tecnico B" },
-            { id: 3, name: "Scuola Media C" },
-        ];
-        filesDB = [
-            { id: 1, name: "logo-main.png", url: "/mocks/logo-main.png", size: 12345 },
-            { id: 2, name: "hero.jpg", url: "/mocks/hero.jpg", size: 45678 },
-        ];
-        listsDB = [
-            {
-                id: 1,
-                name: "Main List",
-                description: "Lista principale del progetto",
-                school: { id: 1, name: "Liceo Scientifico A" },
-                slogan: "Insieme per imparare",
-                colorPrimary: "#0ea5a4",
-                colorSecondary: "#ffffff",
-                file: filesDB[0],
-                createdAt: new Date(),
-            },
-        ];
-        nextListId = 10;
-        nextFileId = 100;
+    // Get all lists
+    async getAll(): Promise<ListSummaryDto[]> {
+        const response = await api.get<ApiResponse<ListSummaryDto[]>>(this.baseUrl);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch lists');
     }
-};
 
+    // Get list by ID
+    async getById(id: number): Promise<ListDetailDto> {
+        const response = await api.get<ApiResponse<ListDetailDto>>(`${this.baseUrl}/${id}`);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch list');
+    }
+
+    // Get lists by school ID
+    async getBySchoolId(schoolId: number): Promise<ListSummaryDto[]> {
+        const response = await api.get<ApiResponse<ListSummaryDto[]>>(`${this.baseUrl}/school/${schoolId}`);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch lists by school');
+    }
+
+    // Create new list
+    async create(payload: ListCreateDto): Promise<ListDetailDto> {
+        const response = await api.post<ApiResponse<ListDetailDto>>(this.baseUrl, payload);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to create list');
+    }
+
+    // Update list
+    async update(id: number, payload: Partial<ListUpdateDto>): Promise<ListDetailDto> {
+        const response = await api.put<ApiResponse<ListDetailDto>>(`${this.baseUrl}/${id}`, {
+            ...payload,
+            listId: id
+        });
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to update list');
+    }
+
+    // Delete list
+    async deleteById(id: number): Promise<void> {
+        const response = await api.delete<ApiResponse<void>>(`${this.baseUrl}/${id}`);
+        if (!response.data.success) {
+            throw new Error(response.data.message || 'Failed to delete list');
+        }
+    }
+
+    // Upload logo file for list
+    async uploadLogo(listId: number, file: File): Promise<ListDetailDto> {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await api.post<ApiResponse<ListDetailDto>>(
+            `${this.baseUrl}/${listId}/logo`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+        
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to upload logo');
+    }
+
+    // Delete logo from list
+    async deleteLogo(listId: number): Promise<void> {
+        const response = await api.delete<ApiResponse<void>>(`${this.baseUrl}/${listId}/logo`);
+        if (!response.data.success) {
+            throw new Error(response.data.message || 'Failed to delete logo');
+        }
+    }
+
+    // Get schools for list assignment
+    async getSchools(): Promise<SchoolSummaryDto[]> {
+        const response = await api.get<ApiResponse<SchoolSummaryDto[]>>('/api/schools');
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch schools');
+    }
+
+    // Get users assigned to a list
+    async getUsersByListId(listId: number): Promise<UserSummaryDto[]> {
+        const response = await api.get<ApiResponse<UserSummaryDto[]>>(`${this.baseUrl}/${listId}/users`);
+        if (response.data.success) {
+            return response.data.data;
+        }
+        throw new Error(response.data.message || 'Failed to fetch users by list');
+    }
+
+    // Add users to list
+    async addUsers(listId: number, userIds: number[]): Promise<void> {
+        const response = await api.post<ApiResponse<void>>(`${this.baseUrl}/${listId}/users`, { userIds });
+        if (!response.data.success) {
+            throw new Error(response.data.message || 'Failed to add users to list');
+        }
+    }
+
+    // Remove users from list
+    async removeUsers(listId: number, userIds: number[]): Promise<void> {
+        const response = await api.delete<ApiResponse<void>>(`${this.baseUrl}/${listId}/users`, {
+            data: { userIds }
+        });
+        if (!response.data.success) {
+            throw new Error(response.data.message || 'Failed to remove users from list');
+        }
+    }
+}
+
+export const listsService = new ListService();
 export default listsService;
