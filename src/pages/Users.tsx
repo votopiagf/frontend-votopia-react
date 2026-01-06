@@ -112,9 +112,13 @@ interface EditUserModalProps {
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ open, user, onCancel, onSave, loading = false }) => {
+    // Use user prop directly as initial state, reset only when user.id changes
     const [form, setForm] = useState<User | null>(user);
 
-    useEffect(() => setForm(user ? { ...user } : null), [user]);
+    // Sync form with user when user changes (different user selected)
+    if (user && (!form || form.id !== user.id)) {
+        setForm({ ...user });
+    }
 
     if (!open || !form) return null;
 
@@ -183,22 +187,23 @@ interface RegisterUserModalProps {
 }
 
 const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ open, onCancel, onCreate, loading = false }) => {
-    const [form, setForm] = useState<Omit<User, 'id'>>({
-        name: '',
-        email: '',
-        roles: '',
-        lists: '',
-        initials: '',
-    });
+    const initialForm = { name: '', email: '', roles: '', lists: '', initials: '' };
+    const [form, setForm] = useState<Omit<User, 'id'>>(initialForm);
 
-    useEffect(() => {
-        if (!open) setForm({ name: '', email: '', roles: '', lists: '', initials: '' });
-    }, [open]);
+    const handleCancel = () => {
+        setForm(initialForm);
+        onCancel();
+    };
+
+    const handleCreate = () => {
+        onCreate(form);
+        setForm(initialForm);
+    };
 
     if (!open) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+            <div className="absolute inset-0 bg-black/40" onClick={handleCancel} />
             <div className="relative bg-white rounded-[12px] shadow-lg p-6 w-[520px]">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Registra nuovo utente</h3>
 
@@ -249,10 +254,10 @@ const RegisterUserModal: React.FC<RegisterUserModalProps> = ({ open, onCancel, o
                 </div>
 
                 <div className="flex justify-end gap-3 mt-5">
-                    <button className="px-4 py-2 rounded-[8px] bg-gray-100" onClick={onCancel} disabled={loading}>Annulla</button>
+                    <button className="px-4 py-2 rounded-[8px] bg-gray-100" onClick={handleCancel} disabled={loading}>Annulla</button>
                     <button
                         className="px-4 py-2 rounded-[8px] bg-green-600 text-white"
-                        onClick={() => onCreate(form)}
+                        onClick={handleCreate}
                         disabled={loading || !form.name || !form.email}
                     >
                         {loading ? 'Salvando...' : 'Registra'}
@@ -275,9 +280,16 @@ const BulkRegisterModal: React.FC<BulkRegisterModalProps> = ({ open, onCancel, o
     const emptyRow = { name: '', email: '', roles: '', lists: '', initials: '' };
     const [rows, setRows] = useState<Omit<User, 'id'>[]>([ { ...emptyRow } ]);
 
-    useEffect(() => {
-        if (!open) setRows([ { ...emptyRow } ]);
-    }, [open]);
+    const handleCancel = () => {
+        setRows([ { ...emptyRow } ]);
+        onCancel();
+    };
+
+    const handleCreateMany = () => {
+        const validRows = rows.filter(r => r.name && r.email);
+        onCreateMany(validRows);
+        setRows([ { ...emptyRow } ]);
+    };
 
     const updateRow = (idx: number, key: keyof Omit<User, 'id'>, value: string) => {
         setRows(prev => {
@@ -293,7 +305,7 @@ const BulkRegisterModal: React.FC<BulkRegisterModalProps> = ({ open, onCancel, o
     if (!open) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+            <div className="absolute inset-0 bg-black/40" onClick={handleCancel} />
             <div className="relative bg-white rounded-[12px] shadow-lg p-6 w-[720px] max-h-[80vh] overflow-auto">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Registra utenti multipli</h3>
                 <p className="text-sm text-gray-600 mb-4">Aggiungi una riga per ogni utente. Al termine premi Registra.</p>
@@ -343,10 +355,10 @@ const BulkRegisterModal: React.FC<BulkRegisterModalProps> = ({ open, onCancel, o
                 <div className="flex items-center justify-between mt-4">
                     <button className="px-3 py-1 border rounded text-sm" onClick={addRow}>Aggiungi riga</button>
                     <div className="flex gap-3">
-                        <button className="px-4 py-2 rounded-[8px] bg-gray-100" onClick={onCancel} disabled={loading}>Annulla</button>
+                        <button className="px-4 py-2 rounded-[8px] bg-gray-100" onClick={handleCancel} disabled={loading}>Annulla</button>
                         <button
                             className="px-4 py-2 rounded-[8px] bg-green-600 text-white"
-                            onClick={() => onCreateMany(rows.filter(r => r.name && r.email))}
+                            onClick={handleCreateMany}
                             disabled={loading || rows.every(r => !r.name || !r.email)}
                         >
                             {loading ? 'Registrando...' : `Registra (${rows.filter(r => r.name && r.email).length})`}
@@ -370,14 +382,24 @@ interface BulkDeleteModalProps {
 const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({ open, users, onCancel, onConfirm, loading = false }) => {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-    useEffect(() => {
-        if (!open) setSelectedIds(new Set());
-    }, [open]);
+    const handleCancel = () => {
+        setSelectedIds(new Set());
+        onCancel();
+    };
+
+    const handleConfirm = () => {
+        onConfirm(Array.from(selectedIds));
+        setSelectedIds(new Set());
+    };
 
     const toggle = (id: string) => {
         setSelectedIds(prev => {
             const clone = new Set(prev);
-            clone.has(id) ? clone.delete(id) : clone.add(id);
+            if (clone.has(id)) {
+                clone.delete(id);
+            } else {
+                clone.add(id);
+            }
             return clone;
         });
     };
@@ -388,7 +410,7 @@ const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({ open, users, onCancel
     if (!open) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+            <div className="absolute inset-0 bg-black/40" onClick={handleCancel} />
             <div className="relative bg-white rounded-[12px] shadow-lg p-6 w-[720px] max-h-[80vh] overflow-auto">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Elimina utenti multipli</h3>
                 <p className="text-sm text-gray-600 mb-4">Seleziona gli utenti che desideri eliminare.</p>
@@ -415,10 +437,10 @@ const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({ open, users, onCancel
                 </div>
 
                 <div className="flex justify-end gap-3 mt-4">
-                    <button className="px-4 py-2 rounded-[8px] bg-gray-100" onClick={onCancel} disabled={loading}>Annulla</button>
+                    <button className="px-4 py-2 rounded-[8px] bg-gray-100" onClick={handleCancel} disabled={loading}>Annulla</button>
                     <button
                         className="px-4 py-2 rounded-[8px] bg-red-600 text-white"
-                        onClick={() => onConfirm(Array.from(selectedIds))}
+                        onClick={handleConfirm}
                         disabled={loading || selectedIds.size === 0}
                     >
                         {loading ? 'Eliminando...' : `Elimina selezionati (${selectedIds.size})`}
@@ -443,18 +465,28 @@ const BulkEditModal: React.FC<BulkEditModalProps> = ({ open, users, onCancel, on
     const [roles, setRoles] = useState('');
     const [lists, setLists] = useState('');
 
-    useEffect(() => {
-        if (!open) {
-            setSelectedIds(new Set());
-            setRoles('');
-            setLists('');
-        }
-    }, [open]);
+    const handleCancel = () => {
+        setSelectedIds(new Set());
+        setRoles('');
+        setLists('');
+        onCancel();
+    };
+
+    const handleConfirm = () => {
+        onConfirm(Array.from(selectedIds), { roles, lists });
+        setSelectedIds(new Set());
+        setRoles('');
+        setLists('');
+    };
 
     const toggle = (id: string) => {
         setSelectedIds(prev => {
             const clone = new Set(prev);
-            clone.has(id) ? clone.delete(id) : clone.add(id);
+            if (clone.has(id)) {
+                clone.delete(id);
+            } else {
+                clone.add(id);
+            }
             return clone;
         });
     };
@@ -463,7 +495,7 @@ const BulkEditModal: React.FC<BulkEditModalProps> = ({ open, users, onCancel, on
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+            <div className="absolute inset-0 bg-black/40" onClick={handleCancel} />
             <div className="relative bg-white rounded-[12px] shadow-lg p-6 w-[720px] max-h-[80vh] overflow-auto">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Modifica utenti multipli</h3>
                 <p className="text-sm text-gray-600 mb-4">Seleziona gli utenti e applica le modifiche desiderate.</p>
@@ -495,10 +527,10 @@ const BulkEditModal: React.FC<BulkEditModalProps> = ({ open, users, onCancel, on
                 </div>
 
                 <div className="flex justify-end gap-3">
-                    <button className="px-4 py-2 rounded-[8px] bg-gray-100" onClick={onCancel} disabled={loading}>Annulla</button>
+                    <button className="px-4 py-2 rounded-[8px] bg-gray-100" onClick={handleCancel} disabled={loading}>Annulla</button>
                     <button
                         className="px-4 py-2 rounded-[8px] bg-blue-600 text-white"
-                        onClick={() => onConfirm(Array.from(selectedIds), { roles, lists })}
+                        onClick={handleConfirm}
                         disabled={loading || selectedIds.size === 0}
                     >
                         {loading ? 'Applicando...' : `Applica a (${selectedIds.size})`}
