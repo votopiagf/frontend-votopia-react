@@ -1,8 +1,6 @@
 // Mocked user service - pattern: export const userService = { getAll, deleteById, deleteMany, create, update }
 // Questo file è intenzionalmente semplice e mantiene lo stato in memoria per scopi di sviluppo/local.
 
-import { User } from "@/pages/Users"; // se la tua configurazione TS non permette questo import, ricopia l'interfaccia User qui.
-
 type UserLocal = {
     id: string;
     name: string;
