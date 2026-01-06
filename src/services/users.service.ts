@@ -1,61 +1,72 @@
-// Mocked user service - pattern: export const userService = { getAll, deleteById, deleteMany, create, update }
-// Questo file è intenzionalmente semplice e mantiene lo stato in memoria per scopi di sviluppo/local.
+import api from "@/services/api";
 
-import { User } from "@/pages/Users"; // se la tua configurazione TS non permette questo import, ricopia l'interfaccia User qui.
+type AnyObj = Record<string, unknown>;
 
-type UserLocal = {
-    id: string;
-    name: string;
-    email: string;
-    roles: string;
-    lists: string;
-    initials: string;
-};
+function unwrapResponse<T = unknown>(res: any): T {
+    // supporta sia shape { data: { data: T } } (ApiResponse) sia { data: T } sia T
+    if (!res) return null as unknown as T;
+    if (res.data && res.data.data !== undefined) return res.data.data as T;
+    if (res.data !== undefined) return res.data as T;
+    return res as T;
+}
 
-// In-memory store (simula DB)
-let usersDB: UserLocal[] = [
-    { id: '1', name: 'Mario Rossi', email: 'mario.rossi@example.com', roles: 'Admin, Editor', lists: 'Main List', initials: 'MR' },
-    { id: '2', name: 'Giulia Bianchi', email: 'giulia.b@example.com', roles: 'Viewer', lists: 'Newsletter', initials: 'GB' },
-    { id: '3', name: 'Luca Verdi', email: 'luca.verdi@example.com', roles: 'Moderator', lists: 'Events', initials: 'LV' },
-];
-
-// utilità per delay simulato
-const delay = (ms = 400) => new Promise(resolve => setTimeout(resolve, ms));
-
-export const userService = {
-    async getAll(): Promise<UserLocal[]> {
-        await delay(300);
-        // restituisci copia per evitare leak di riferimento
-        return usersDB.map(u => ({ ...u }));
-    },
-
-    async deleteById(id: string): Promise<void> {
-        await delay(300);
-        usersDB = usersDB.filter(u => u.id !== id);
-    },
-
-    async deleteMany(ids: string[]): Promise<void> {
-        await delay(400);
-        const set = new Set(ids);
-        usersDB = usersDB.filter(u => !set.has(u.id));
-    },
-
-    async create(payload: Omit<UserLocal, 'id'>): Promise<UserLocal> {
-        await delay(300);
-        const newUser: UserLocal = {
-            id: (Date.now() + Math.floor(Math.random() * 1000)).toString(),
-            ...payload
-        };
-        usersDB = [newUser, ...usersDB];
-        return { ...newUser };
-    },
-
-    async update(id: string, payload: Partial<UserLocal>): Promise<UserLocal> {
-        await delay(300);
-        usersDB = usersDB.map(u => u.id === id ? { ...u, ...payload } : u);
-        const user = usersDB.find(u => u.id === id)!;
-        return { ...user };
+function normalizeId<T extends AnyObj>(item: T) {
+    if (item == null) return item;
+    if (typeof item.id !== 'string') {
+        return { ...item, id: String(item.id) } as T;
     }
-};
+    return item;
+}
 
-export default userService;
+class UsersService {
+    async getAll(): Promise<any[]> {
+        const res = await api.get('api/users/all/');
+        const data = unwrapResponse<any[]>(res) || [];
+        return Array.isArray(data) ? data.map(normalizeId) : [];
+    }
+
+    async getById(id: string | number): Promise<any | null> {
+        const res = await api.get(`api/users/${encodeURIComponent(String(id))}/`);
+        const data = unwrapResponse<any>(res);
+        return data ? normalizeId(data) : null;
+    }
+
+    async create(payload: AnyObj): Promise<any> {
+        const res = await api.post('api/users/', payload);
+        const data = unwrapResponse<any>(res);
+        return normalizeId(data);
+    }
+
+    async update(id: string | number, payload: AnyObj): Promise<any> {
+        const res = await api.put(`api/users/${encodeURIComponent(String(id))}/`, payload);
+        const data = unwrapResponse<any>(res);
+        return normalizeId(data || { id });
+    }
+
+    async deleteById(id: string | number): Promise<void> {
+        await api.delete(`api/users/${encodeURIComponent(String(id))}/`);
+    }
+
+    async deleteMany(ids: (string | number)[]): Promise<void> {
+        // endpoint comune per delete many; fallback: invia singole delete se non disponibile
+        try {
+            await api.post('api/users/delete-many/', { ids });
+        } catch (e) {
+            // fallback: delete singole
+            await Promise.all(ids.map(id => api.delete(`api/users/${encodeURIComponent(String(id))}/`)));
+        }
+    }
+
+    // opzionali per la UI (manteniamo wrapper semplice)
+    async getRoles(): Promise<any[]> {
+        const res = await api.get('api/roles/');
+        return unwrapResponse<any[]>(res) || [];
+    }
+
+    async getLists(): Promise<any[]> {
+        const res = await api.get('api/lists/');
+        return unwrapResponse<any[]>(res) || [];
+    }
+}
+
+export default new UsersService();

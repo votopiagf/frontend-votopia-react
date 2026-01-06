@@ -3,11 +3,11 @@ import type {ApiResponse} from '@/types/api.types';
 import type {ErrorResponse} from "@/types";
 
 // URL base del backend (usa variabile d'ambiente se disponibile)
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-// Configurazione axios
 export const api = axios.create({
-    baseURL: BASE_URL,
+    baseURL: BASE_URL, // vuoto = usa proxy
+    timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
     },

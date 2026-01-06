@@ -14,6 +14,7 @@ import Roles from "@/pages/Roles";
 import Lists from "@/pages/Lists";
 import Files from "@/pages/Files";
 import ListsMenu from "@/pages/ListsMenu";
+import ListDashboard from "@/pages/ListDashboard";
 
 
 function App() {
@@ -127,6 +128,15 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <ListsMenu />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/list-dashboard"
+                    element={
+                        <ProtectedRoute>
+                            <ListDashboard />
                         </ProtectedRoute>
                     }
                 />

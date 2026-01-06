@@ -6,11 +6,19 @@ import {
     Download,
     Plus,
     FileText,
-    Image, Users
+    Image,
+    Users as UsersIcon,
+    ChevronDown,
+    ShieldOff,
+    FileText as FileIcon,
+    ArrowRightCircle,
+    ArrowLeft
 } from "lucide-react";
 import { AppColor } from "@/styles/colors";
 import { ActionButton } from "@/components/ui/action-button";
 import { listsService } from "@/services/lists.service";
+import { roleService } from "@/services/roles.service";
+import { filesService } from "@/services/files.service";
 
 // Tipi exportabili
 export interface SchoolSummary {
@@ -48,12 +56,12 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = ({ value, label, bg, textCol, icon: Icon }) => (
     <div className={`p-6 rounded-[20px] shadow-lg flex justify-between items-center ${bg}`}>
         <div className="flex flex-col">
-      <span className="text-sm font-extrabold mb-2" style={{ color: bg === "bg-white" ? "#4b5563" : textCol }}>
-        {label}
-      </span>
+            <span className="text-sm font-extrabold mb-2" style={{ color: bg === "bg-white" ? "#4b5563" : textCol }}>
+                {label}
+            </span>
             <span className="text-5xl font-bold leading-none tracking-tighter" style={{ color: textCol }}>
-        {value}
-      </span>
+                {value}
+            </span>
         </div>
         {Icon && (
             <div className={`p-4 rounded-full ${bg === 'bg-white' ? 'bg-gray-100' : 'bg-white/20'}`}>
@@ -116,6 +124,7 @@ const EditListModal: React.FC<EditListModalProps> = ({ open, list, schools, onCa
     useEffect(() => {
         if (!open) return;
         if (list) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setForm({
                 name: list.name,
                 description: list.description,
@@ -217,6 +226,19 @@ const ListsScreen: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [showRegister, setShowRegister] = useState(false);
 
+    // tabs (unisci la visualizzazione di ListMenu)
+    const tabs = ["Overview", "Members", "Roles", "Files", "Settings"] as const;
+    type Tab = typeof tabs[number];
+    const [activeTab, setActiveTab] = useState<Tab>("Overview");
+
+    // related counts for selected list
+    const [rolesCount, setRolesCount] = useState<number | null>(null);
+    const [filesCount, setFilesCount] = useState<number | null>(null);
+    const [members, setMembers] = useState<{ id: number; name: string; email?: string; role?: string }[]>([]);
+
+    // enter view state: quando si entra nella lista mostra vista "interna" a tutto schermo
+    const [inListView, setInListView] = useState(false);
+
     useEffect(() => {
         let cancelled = false;
         const load = async () => {
@@ -243,9 +265,43 @@ const ListsScreen: React.FC = () => {
         return lists.filter(l => l.name.toLowerCase().includes(q) || l.description.toLowerCase().includes(q) || (l.school?.name || "").toLowerCase().includes(q));
     }, [lists, searchQuery]);
 
+    const selected = selectedIndex !== null ? lists[selectedIndex] : null;
+
+    useEffect(() => {
+        const loadRelated = async () => {
+            if (!selected) {
+                setRolesCount(null);
+                setFilesCount(null);
+                setMembers([]);
+                return;
+            }
+            setRolesCount(null);
+            setFilesCount(null);
+            try {
+                const allRoles = await roleService.getAll();
+                setRolesCount(allRoles.filter(r => r.list && r.list.id === selected.id).length);
+            } catch {
+                setRolesCount(0);
+            }
+            try {
+                const allFiles = await filesService.getAll();
+                setFilesCount(allFiles.filter(f => f.list && f.list.id === selected.id).length);
+            } catch {
+                setFilesCount(0);
+            }
+            // members mock
+            setMembers([
+                { id: 1, name: "Mario Rossi", email: "mario.rossi@example.com", role: "Admin" },
+                { id: 2, name: "Giulia Bianchi", email: "giulia.b@example.com", role: "Moderator" },
+            ]);
+        };
+        loadRelated();
+    }, [selected]);
+
     // actions
-    const openEdit = (l: ListDetail) => { setEditTarget(l); setShowEdit(true); };
+    const openEdit = (l: ListDetail | null) => { setEditTarget(l); setShowEdit(true); };
     const openCreate = () => { setEditTarget(null); setShowEdit(true); };
+
     const saveList = async (payload: Omit<ListDetail, "id" | "createdAt"> & Partial<Pick<ListDetail, "id">>) => {
         setActionLoading(true);
         try {
@@ -282,6 +338,22 @@ const ListsScreen: React.FC = () => {
         }
     };
 
+    // quando si clicca su una lista, entrare nella sua overview (tab Overview)
+    const selectList = (idx: number) => {
+        setSelectedIndex(idx);
+        setActiveTab("Overview");
+    };
+
+    // entra nella vista interna della lista (full-screen style, mantiene activeTab)
+    const enterList = () => {
+        if (!selected) return;
+        setInListView(true);
+    };
+
+    const exitList = () => {
+        setInListView(false);
+    };
+
     return (
         <div className="flex h-screen w-full bg-[#EFEFEF] overflow-hidden font-sans">
             <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -289,94 +361,198 @@ const ListsScreen: React.FC = () => {
                     <div className="max-w-[1600px] mx-auto">
                         <div className="grid grid-cols-3 gap-5 mb-6">
                             <StatCard value={lists.length} label="Liste totali" bg="bg-white" textCol="#374151" icon={FileText} />
-                            <StatCard value={schools.length} label="Scuole" bg="bg-[#d9f99d]" textCol="#285300" icon={Users} />
-                            <StatCard value="—" label="File caricati" bg="bg-white" textCol="#374151" icon={Image} />
+                            <StatCard value={schools.length} label="Scuole" bg="bg-[#d9f99d]" textCol="#285300" icon={UsersIcon} />
+                            <StatCard value={filesCount ?? "—"} label="File collegati (selezione)" bg="bg-white" textCol="#374151" icon={Image} />
+                        </div>
+
+                        <div className="p-5 bg-white rounded-[20px] shadow-sm flex gap-4 items-center mb-6">
+                            <div className="flex-1 h-[45px] bg-[#F8F9FA] rounded-[10px] flex items-center px-4">
+                                <Search size={18} className="text-gray-500 mr-2" />
+                                <input type="text" placeholder="Cerca per nome, scuola ..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-transparent border-none outline-none text-sm w-full text-gray-700" />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-[#F8F9FA] rounded text-sm text-gray-700 cursor-pointer">
+                                    Filtri
+                                    <ChevronDown size={16} />
+                                </div>
+                                <ActionButton icon={Plus} onClick={openCreate}>Nuova lista</ActionButton>
+                                <ActionButton icon={Download}>Esporta</ActionButton>
+                                <ActionButton icon={Plus} onClick={() => setShowRegister(true)}>Registra nuova lista</ActionButton>
+                            </div>
                         </div>
 
                         <div className="flex flex-row items-start gap-6">
-                            {/* LEFT */}
-                            <div className="flex-[2] flex flex-col gap-4">
-                                <div className="p-5 bg-white rounded-[20px] shadow-sm flex gap-4 items-center">
-                                    <div className="flex-1 h-[45px] bg-[#F8F9FA] rounded-[10px] flex items-center px-4">
-                                        <Search size={18} className="text-gray-500 mr-2" />
-                                        <input type="text" placeholder="Cerca per nome, scuola ..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-transparent border-none outline-none text-sm w-full text-gray-700" />
-                                    </div>
+                            {/* LEFT: hide when inListView */}
+                            {!inListView && (
+                                <div className="flex-[2] flex flex-col gap-4">
+                                    <div className="bg-white rounded-[20px] shadow-sm pb-6 min-h-[400px]">
+                                        <div className="p-6 pb-2">
+                                            <h3 className="text-xl font-semibold text-gray-800">Elenco liste</h3>
+                                        </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <ActionButton icon={Plus} onClick={openCreate}>Nuova lista</ActionButton>
+                                        {loading ? (
+                                            <div className="p-10 text-center text-gray-500">Caricamento...</div>
+                                        ) : filtered.length === 0 ? (
+                                            <div className="p-10 text-center text-gray-500">Nessuna lista trovata</div>
+                                        ) : (
+                                            <div className="flex flex-col">
+                                                {filtered.map((l) => {
+                                                    const idx = lists.findIndex(x => x.id === l.id);
+                                                    const isSelected = selectedIndex === idx;
+                                                    return (
+                                                        <div key={l.id} onClick={() => selectList(idx)} className={`px-6 py-4 border-b border-gray-100 flex items-center cursor-pointer transition-colors hover:bg-gray-50 ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                                                            <div className="flex-1">
+                                                                <h4 className="text-[17px] font-semibold text-gray-900">{l.name}</h4>
+                                                                <p className="text-sm text-gray-500 mt-1">{l.description}</p>
+                                                                <div className="mt-2 text-xs text-gray-600">{l.school ? l.school.name : "No school"}</div>
+                                                            </div>
+
+                                                            <div className="flex gap-2">
+                                                                <button className="p-2 bg-[#336900] text-white rounded-[8px] hover:bg-[#285300] transition" onClick={(e) => { e.stopPropagation(); openEdit(l); }} title="Modifica">
+                                                                    <Edit size={16} />
+                                                                </button>
+                                                                <button className="p-2 bg-red-600 text-white rounded-[8px] hover:bg-red-700 transition" onClick={(e) => { e.stopPropagation(); openDelete(l); }} title="Elimina">
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                                <button className="p-2 bg-blue-600 text-white rounded-[8px] hover:bg-blue-700 transition flex items-center gap-2" onClick={(e) => { e.stopPropagation(); selectList(idx); enterList(); }} title="Entra">
+                                                                    <ArrowRightCircle size={16} /> Entra
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
+                            )}
 
-                                <div className="bg-white rounded-[20px] shadow-sm pb-6 min-h-[400px]">
-                                    <div className="p-6 pb-2">
-                                        <h3 className="text-xl font-semibold text-gray-800">Elenco liste</h3>
-                                    </div>
-
-                                    {loading ? (
-                                        <div className="p-10 text-center text-gray-500">Caricamento...</div>
-                                    ) : filtered.length === 0 ? (
-                                        <div className="p-10 text-center text-gray-500">Nessuna lista trovata</div>
-                                    ) : (
-                                        <div className="flex flex-col">
-                                            {filtered.map((l, idx) => (
-                                                <div key={l.id} onClick={() => setSelectedIndex(idx)} className={`px-6 py-4 border-b border-gray-100 flex items-center cursor-pointer transition-colors hover:bg-gray-50 ${selectedIndex === idx ? 'bg-blue-50/50' : ''}`}>
-                                                    <div className="flex-1">
-                                                        <h4 className="text-[17px] font-semibold text-gray-900">{l.name}</h4>
-                                                        <p className="text-sm text-gray-500 mt-1">{l.description}</p>
-                                                        <div className="mt-2 text-xs text-gray-600">{l.school ? l.school.name : "No school"}</div>
+                            {/* RIGHT: overview + tabs — if inListView take more space */}
+                            <div className={inListView ? "flex-[1] md:flex-[1]" : "flex-[2] flex flex-col gap-6"}>
+                                <div className="p-7 bg-white rounded-[20px] shadow-sm flex flex-col items-stretch min-h-[400px]">
+                                    {selected ? (
+                                        <>
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-[96px] h-[96px] rounded-full flex items-center justify-center" style={{ backgroundColor: AppColor.secondary }}>
+                                                        <span className="text-[28px] font-semibold text-[#336900]">{selected.name.slice(0,2).toUpperCase()}</span>
                                                     </div>
-
-                                                    <div className="flex gap-2">
-                                                        <button className="p-2 bg-[#336900] text-white rounded-[8px] hover:bg-[#285300] transition" onClick={(e) => { e.stopPropagation(); openEdit(l); }} title="Modifica">
-                                                            <Edit size={16} />
-                                                        </button>
-                                                        <button className="p-2 bg-red-600 text-white rounded-[8px] hover:bg-red-700 transition" onClick={(e) => { e.stopPropagation(); openDelete(l); }} title="Elimina">
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                    <div>
+                                                        <h2 className="text-2xl font-semibold text-gray-900">{selected.name}</h2>
+                                                        <p className="text-sm text-gray-500 mt-1">{selected.slogan || selected.description}</p>
+                                                        <div className="text-xs text-gray-400 mt-2">Creata: {selected.createdAt.toLocaleDateString()}</div>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
 
-                            {/* RIGHT */}
-                            <div className="flex-[2] flex flex-col gap-6">
-                                <div className="p-7 bg-white rounded-[20px] shadow-sm flex flex-col items-center">
-                                    {selectedIndex !== null && lists[selectedIndex] ? (
-                                        <>
-                                            <div className="w-[120px] h-[120px] rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: AppColor.secondary }}>
-                                                <span className="text-[20px] font-semibold text-[#336900]">{lists[selectedIndex].name.slice(0,2).toUpperCase()}</span>
+                                                <div className="flex flex-col items-end gap-3">
+                                                    <div className="flex gap-2">
+                                                        <ActionButton icon={Edit} variant="secondary" onClick={() => openEdit(selected)}>Modifica</ActionButton>
+                                                        <ActionButton icon={Trash2} variant="destructive" onClick={() => { setEditTarget(selected); setShowConfirmDelete(true); }}>Elimina</ActionButton>
+                                                    </div>
+                                                    <div className="text-sm text-gray-500">ID: {selected.id}</div>
+                                                </div>
                                             </div>
 
-                                            <h2 className="text-2xl font-semibold text-gray-900 text-center">{lists[selectedIndex].name}</h2>
-                                            <p className="text-[15px] text-gray-500 mt-2 text-center">{lists[selectedIndex].slogan}</p>
+                                            {/* if inListView show a small back button */}
+                                            {inListView && (
+                                                <div className="mt-4">
+                                                    <button className="inline-flex items-center gap-2 text-sm text-gray-600" onClick={exitList}>
+                                                        <ArrowLeft /> Torna alle liste
+                                                    </button>
+                                                </div>
+                                            )}
 
-                                            <div className="w-full h-px bg-gray-200 my-6"></div>
+                                            {/* Tabs */}
+                                            <div className="mt-6">
+                                                <div className="flex gap-3 border-b pb-3">
+                                                    {tabs.map(t => (
+                                                        <button key={t} className={`px-3 py-2 text-sm rounded ${activeTab === t ? "bg-blue-50 font-medium" : "text-gray-600"}`} onClick={() => setActiveTab(t as Tab)}>
+                                                            {t}
+                                                        </button>
+                                                    ))}
+                                                </div>
 
-                                            <div className="w-full mb-4">
-                                                <p className="text-[13px] text-gray-500 font-medium mb-1.5">Descrizione</p>
-                                                <p className="text-sm text-gray-900">{lists[selectedIndex].description}</p>
-                                            </div>
+                                                <div className="mt-4">
+                                                    {activeTab === "Overview" && (
+                                                        <div className="space-y-4">
+                                                            <div className="grid grid-cols-3 gap-4">
+                                                                <div className="p-4 rounded border">
+                                                                    <div className="text-sm text-gray-500">Ruoli</div>
+                                                                    <div className="text-2xl font-bold">{rolesCount ?? "—"}</div>
+                                                                </div>
+                                                                <div className="p-4 rounded border">
+                                                                    <div className="text-sm text-gray-500">File</div>
+                                                                    <div className="text-2xl font-bold">{filesCount ?? "—"}</div>
+                                                                </div>
+                                                                <div className="p-4 rounded border">
+                                                                    <div className="text-sm text-gray-500">Membri</div>
+                                                                    <div className="text-2xl font-bold">{members.length}</div>
+                                                                </div>
+                                                            </div>
 
-                                            <div className="w-full h-px bg-gray-200 mb-4"></div>
+                                                            <div>
+                                                                <h4 className="text-sm font-medium text-gray-700 mb-2">Descrizione</h4>
+                                                                <p className="text-sm text-gray-600">{selected.description}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
 
-                                            <div className="w-full mb-6">
-                                                <p className="text-[13px] text-gray-500 font-medium mb-1.5">Scuola</p>
-                                                <p className="text-sm text-gray-900">{lists[selectedIndex].school ? lists[selectedIndex].school.name : "Nessuna"}</p>
-                                            </div>
+                                                    {activeTab === "Members" && (
+                                                        <div>
+                                                            <div className="flex justify-between items-center mb-3">
+                                                                <h4 className="font-semibold">Membri ({members.length})</h4>
+                                                                <ActionButton icon={UsersIcon}>Aggiungi membro</ActionButton>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                {members.map(m => (
+                                                                    <div key={m.id} className="p-3 border rounded flex items-center justify-between">
+                                                                        <div>
+                                                                            <div className="font-medium">{m.name}</div>
+                                                                            <div className="text-xs text-gray-500">{m.email}</div>
+                                                                        </div>
+                                                                        <div className="text-sm text-gray-600">{m.role}</div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
 
-                                            <div className="w-full flex flex-col gap-3">
-                                                <ActionButton icon={Download}>Esporta</ActionButton>
-                                                <ActionButton icon={Edit} variant="secondary" onClick={() => openEdit(lists[selectedIndex])}>Modifica</ActionButton>
-                                                <button className="w-full py-3.5 border border-[#1e3a8a] text-[#1e3a8a] rounded-[10px] font-medium hover:bg-blue-50 transition-colors" onClick={() => { setEditTarget(lists[selectedIndex]); setShowConfirmDelete(true); }}>
-                                                    Elimina lista
-                                                </button>
+                                                    {activeTab === "Roles" && (
+                                                        <div>
+                                                            <div className="flex justify-between items-center mb-3">
+                                                                <h4 className="font-semibold">Ruoli ({rolesCount ?? "—"})</h4>
+                                                                <ActionButton icon={ShieldOff}>Gestisci ruoli</ActionButton>
+                                                            </div>
+                                                            <div className="text-sm text-gray-500">Apri la sezione Ruoli per modificare o creare ruoli collegati a questa lista.</div>
+                                                        </div>
+                                                    )}
+
+                                                    {activeTab === "Files" && (
+                                                        <div>
+                                                            <div className="flex justify-between items-center mb-3">
+                                                                <h4 className="font-semibold">File ({filesCount ?? "—"})</h4>
+                                                                <ActionButton icon={FileIcon}>Carica file</ActionButton>
+                                                            </div>
+                                                            <div className="text-sm text-gray-500">Visualizza e gestisci i file associati a questa lista.</div>
+                                                        </div>
+                                                    )}
+
+                                                    {activeTab === "Settings" && (
+                                                        <div>
+                                                            <h4 className="font-semibold mb-3">Impostazioni</h4>
+                                                            <div className="space-y-2">
+                                                                <button className="px-4 py-2 border rounded text-sm" onClick={() => { console.log("Apri permessi avanzati"); }}>Permessi avanzati</button>
+                                                                <button className="px-4 py-2 border rounded text-sm" onClick={() => { console.log("Opzioni integrazione"); }}>Integrazioni</button>
+                                                                <button className="px-4 py-2 border rounded text-sm" onClick={() => { console.log("Export data"); }}>Esporta dati</button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </>
                                     ) : (
-                                        <div className="text-gray-400 py-10">Nessuna lista selezionata</div>
+                                        <div className="text-gray-400 py-10">Seleziona una lista a sinistra per aprire l'overview.</div>
                                     )}
                                 </div>
 
@@ -395,10 +571,9 @@ const ListsScreen: React.FC = () => {
 
                         {/* Modals */}
                         <ConfirmModal open={showConfirmDelete} title="Elimina lista" message={`Sei sicuro di voler eliminare la lista "${editTarget?.name}"?`} onCancel={() => setShowConfirmDelete(false)} onConfirm={confirmDelete} loading={actionLoading} />
-
                         <EditListModal open={showEdit} list={editTarget} schools={schools} onCancel={() => { setShowEdit(false); setEditTarget(null); }} onSave={saveList} loading={actionLoading} />
-
-                        <EditListModal open={showRegister} list={null} schools={schools} onCancel={() => setShowRegister(false)} onSave={(p) => saveList(p as any)} loading={actionLoading} />
+                        {/* Reuse EditListModal to register too */}
+                        <EditListModal open={showRegister} list={null} schools={schools} onCancel={() => setShowRegister(false)} onSave={(p) => saveList(p as never)} loading={actionLoading} />
                     </div>
                 </main>
             </div>

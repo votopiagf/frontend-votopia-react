@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 import {AppColor} from "@/styles/colors";
 import {ActionButton} from "@/components/ui/action-button";
-import { userService } from "@/services/users.service"; // service mockato (pattern userService)
+import userService from "@/services/users.service";
 
-// --- Tipi & Interfacce ---
+// --- Tipi locali usati in questo file (allineati ai campi usati nel markup) ---
 interface User {
     id: string;
     name: string;
@@ -23,6 +23,8 @@ interface User {
     lists: string;
     initials: string;
 }
+
+type UserUpdate = Partial<User> & { id: string };
 
 // --- Componenti Helper (Definiti fuori per pulizia) ---
 interface StatCardProps {
@@ -105,14 +107,14 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 // --- Edit Single User Modal ---
 interface EditUserModalProps {
     open: boolean;
-    user: User | null;
+    user: UserUpdate | null;
     onCancel: () => void;
-    onSave: (u: User) => void;
+    onSave: (u: UserUpdate) => void;
     loading?: boolean;
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ open, user, onCancel, onSave, loading = false }) => {
-    const [form, setForm] = useState<User | null>(user);
+    const [form, setForm] = useState<UserUpdate | null>(user);
 
     useEffect(() => setForm(user ? { ...user } : null), [user]);
 
@@ -129,7 +131,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, user, onCancel, onS
                         <label className="text-sm text-gray-600">Nome</label>
                         <input
                             className="w-full mt-1 p-2 border rounded text-sm"
-                            value={form.name}
+                            value={form.name ?? ''}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                         />
                     </div>
@@ -137,7 +139,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, user, onCancel, onS
                         <label className="text-sm text-gray-600">Email</label>
                         <input
                             className="w-full mt-1 p-2 border rounded text-sm"
-                            value={form.email}
+                            value={form.email ?? ''}
                             onChange={(e) => setForm({ ...form, email: e.target.value })}
                         />
                     </div>
@@ -145,7 +147,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, user, onCancel, onS
                         <label className="text-sm text-gray-600">Ruoli</label>
                         <input
                             className="w-full mt-1 p-2 border rounded text-sm"
-                            value={form.roles}
+                            value={form.roles ?? ''}
                             onChange={(e) => setForm({ ...form, roles: e.target.value })}
                         />
                     </div>
@@ -153,7 +155,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, user, onCancel, onS
                         <label className="text-sm text-gray-600">Liste</label>
                         <input
                             className="w-full mt-1 p-2 border rounded text-sm"
-                            value={form.lists}
+                            value={form.lists ?? ''}
                             onChange={(e) => setForm({ ...form, lists: e.target.value })}
                         />
                     </div>
@@ -513,7 +515,7 @@ const BulkEditModal: React.FC<BulkEditModalProps> = ({ open, users, onCancel, on
 
 const UsersScreen: React.FC = () => {
     // --- State ---
-    const [selectedUserIndex, setSelectedUserIndex] = useState<number | null>(null);
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -538,8 +540,14 @@ const UsersScreen: React.FC = () => {
             setLoading(true);
             try {
                 // usa il service mockato
-                const data = await userService.getAll();
-                if (!cancelled) setUsers(data);
+                const data = await userService.getAll(); // <-- corretto: userService.getAll()
+                if (!cancelled) {
+                    setUsers(data);
+                    // default selection: first user id se nessuna selezione
+                    if (!selectedUserId && Array.isArray(data) && data.length > 0) {
+                        setSelectedUserId(String(data[0].id));
+                    }
+                }
             } catch (e) {
                 console.error("Errore fetch utenti", e);
             } finally {
@@ -549,7 +557,7 @@ const UsersScreen: React.FC = () => {
 
         fetchUsers();
         return () => { cancelled = true; };
-    }, []);
+    }, []); // nota: non includiamo selectedUserId qui per evitare loop di fetch
 
     // --- Logica Filtri ---
     const filteredUsers = useMemo(() => {
@@ -573,16 +581,10 @@ const UsersScreen: React.FC = () => {
             await userService.deleteById(userToAct.id);
             setUsers(prev => {
                 const next = prev.filter(u => u.id !== userToAct.id);
-                // aggiorna selected index se necessario
-                if (selectedUserIndex !== null) {
-                    const removedIdx = prev.findIndex(p => p.id === userToAct.id);
-                    if (removedIdx >= 0) {
-                        if (removedIdx === selectedUserIndex) {
-                            setSelectedUserIndex(null);
-                        } else if (removedIdx < selectedUserIndex) {
-                            setSelectedUserIndex(i => i !== null ? i - 1 : i);
-                        }
-                    }
+                if (selectedUserId === userToAct.id) {
+                    // se l'utente cancellato era selezionato, deseleziona o seleziona il primo rimasto
+                    if (next.length > 0) setSelectedUserId(next[0].id);
+                    else setSelectedUserId(null);
                 }
                 return next;
             });
@@ -603,8 +605,15 @@ const UsersScreen: React.FC = () => {
         setActionLoading(true);
         try {
             await userService.deleteMany(ids);
-            setUsers(prev => prev.filter(u => !ids.includes(u.id)));
-            setSelectedUserIndex(null);
+            setUsers(prev => {
+                const next = prev.filter(u => !ids.includes(u.id));
+                // se la selezione corrente è stata eliminata, aggiorna
+                if (selectedUserId && ids.includes(selectedUserId)) {
+                    if (next.length > 0) setSelectedUserId(next[0].id);
+                    else setSelectedUserId(null);
+                }
+                return next;
+            });
         } catch (e) {
             console.error("Errore bulk delete", e);
         } finally {
@@ -662,11 +671,7 @@ const UsersScreen: React.FC = () => {
     };
 
     const confirmResetPassword = async () => {
-        if (selectedUserIndex === null) {
-            setShowResetConfirm(false);
-            return;
-        }
-        const user = users[selectedUserIndex];
+        const user = selectedUserId ? users.find(u => u.id === selectedUserId) : null;
         if (!user) {
             setShowResetConfirm(false);
             return;
@@ -694,6 +699,8 @@ const UsersScreen: React.FC = () => {
         try {
             const created = await userService.create(payload);
             setUsers(prev => [created, ...prev]);
+            // seleziona il nuovo utente appena creato
+            if (created?.id) setSelectedUserId(String(created.id));
         } catch (e) {
             console.error("Errore registrazione utente", e);
         } finally {
@@ -708,6 +715,7 @@ const UsersScreen: React.FC = () => {
         try {
             const created = await Promise.all(payloads.map(p => userService.create(p)));
             setUsers(prev => [...created, ...prev]);
+            if (created.length > 0 && created[0]?.id) setSelectedUserId(String(created[0].id));
         } catch (e) {
             console.error("Errore registrazione multipla", e);
         } finally {
@@ -717,6 +725,9 @@ const UsersScreen: React.FC = () => {
     };
 
     // --- Render ---
+    // selezione derivata
+    const selectedUser = selectedUserId ? users.find(u => u.id === selectedUserId) : (users[0] ?? null);
+
     return (
         <div className="flex h-screen w-full bg-[#EFEFEF] overflow-hidden font-sans">
 
@@ -779,11 +790,11 @@ const UsersScreen: React.FC = () => {
                                             {filteredUsers.map((user, idx) => (
                                                 <div
                                                     key={user.id}
-                                                    onClick={() => setSelectedUserIndex(idx)}
+                                                    onClick={() => setSelectedUserId(user.id)}
                                                     className={`
                                                         px-6 py-4 border-b border-gray-100 flex items-center cursor-pointer transition-colors hover:bg-gray-50
                                                         ${idx === filteredUsers.length - 1 ? 'border-b-0' : ''}
-                                                        ${selectedUserIndex === idx ? 'bg-blue-50/50' : ''}
+                                                        ${selectedUserId === user.id ? 'bg-blue-50/50' : ''}
                                                     `}
                                                 >
                                                     <div className="flex-1">
@@ -829,15 +840,15 @@ const UsersScreen: React.FC = () => {
                                             <div className="w-[120px] h-[120px] rounded-full flex items-center justify-center mb-5"
                                                  style={{ backgroundColor: AppColor.secondary }}>
                                                 <span className="text-[40px] font-semibold text-[#336900]">
-                                                    {selectedUserIndex !== null ? users[selectedUserIndex].initials : users[0].initials}
+                                                    {selectedUser ? selectedUser.initials : users[0].initials}
                                                 </span>
                                             </div>
 
                                             <h2 className="text-2xl font-semibold text-gray-900 text-center">
-                                                {selectedUserIndex !== null ? users[selectedUserIndex].name : users[0].name}
+                                                {selectedUser ? selectedUser.name : users[0].name}
                                             </h2>
                                             <p className="text-[15px] text-gray-500 mt-2 text-center">
-                                                {selectedUserIndex !== null ? users[selectedUserIndex].roles : users[0].roles}
+                                                {selectedUser ? selectedUser.roles : users[0].roles}
                                             </p>
 
                                             <div className="w-full h-px bg-gray-200 my-6"></div>
@@ -845,7 +856,7 @@ const UsersScreen: React.FC = () => {
                                             <div className="w-full mb-4">
                                                 <p className="text-[13px] text-gray-500 font-medium mb-1.5">E-mail</p>
                                                 <p className="text-sm text-gray-900">
-                                                    {selectedUserIndex !== null ? users[selectedUserIndex].email : users[0].email}
+                                                    {selectedUser ? selectedUser.email : users[0].email}
                                                 </p>
                                             </div>
 
@@ -854,12 +865,12 @@ const UsersScreen: React.FC = () => {
                                             <div className="w-full mb-6">
                                                 <p className="text-[13px] text-gray-500 font-medium mb-1.5">Liste</p>
                                                 <p className="text-sm text-gray-900">
-                                                    {selectedUserIndex !== null ? users[selectedUserIndex].lists : users[0].lists}
+                                                    {selectedUser ? selectedUser.lists : users[0].lists}
                                                 </p>
                                             </div>
                                             <div className="w-full flex flex-col gap-3">
                                                 <ActionButton icon={Edit} variant={"secondary"} onClick={() => {
-                                                    if (selectedUserIndex !== null) openEditUser(users[selectedUserIndex]);
+                                                    if (selectedUser) openEditUser(selectedUser);
                                                 }}>
                                                     Modifica utente
                                                 </ActionButton>
@@ -988,3 +999,4 @@ const UsersScreen: React.FC = () => {
 };
 
 export default UsersScreen;
+
