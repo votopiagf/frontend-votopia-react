@@ -112,13 +112,7 @@ interface EditUserModalProps {
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ open, user, onCancel, onSave, loading = false }) => {
-    // Use user prop directly as initial state, reset only when user.id changes
     const [form, setForm] = useState<User | null>(user);
-
-    // Sync form with user when user changes (different user selected)
-    if (user && (!form || form.id !== user.id)) {
-        setForm({ ...user });
-    }
 
     if (!open || !form) return null;
 
@@ -984,6 +978,7 @@ const UsersScreen: React.FC = () => {
             />
 
             <EditUserModal
+                key={userToAct?.id || 'new'}
                 open={showEditUser}
                 user={userToAct}
                 onCancel={() => { setShowEditUser(false); setUserToAct(null); }}
