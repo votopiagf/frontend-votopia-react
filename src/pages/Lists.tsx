@@ -17,7 +17,7 @@ import {
 import { AppColor } from "@/styles/colors";
 import { ActionButton } from "@/components/ui/action-button";
 import { listsService } from "@/services/lists.service";
-import { roleService } from "@/services/roles.service";
+import { rolesService } from "@/services/roles.service";
 import { filesService } from "@/services/files.service";
 
 // Tipi exportabili
@@ -278,7 +278,7 @@ const ListsScreen: React.FC = () => {
             setRolesCount(null);
             setFilesCount(null);
             try {
-                const allRoles = await roleService.getAll();
+                const allRoles = await rolesService.getAll();
                 setRolesCount(allRoles.filter(r => r.list && r.list.id === selected.id).length);
             } catch {
                 setRolesCount(0);

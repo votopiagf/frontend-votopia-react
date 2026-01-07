@@ -21,23 +21,23 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // Log della richiesta
-        console.group(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
-        console.log('📍 Full URL:', `${config.baseURL}${config.url}`);
-        console.log('🔑 Headers:', config.headers);
-        if (config.data) {
-            console.log('📦 Request Data:', config.data);
+        // Log della richiesta (solo in dev)
+        if (import.meta.env.DEV) {
+            console.group(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+            console.log('Full URL:', `${config.baseURL}${config.url}`);
+            console.log('Headers:', config.headers);
+            if (config.data) {
+                console.log('Request Data:', config.data);
+            }
+            console.log('Query Params:', config.params && Object.keys(config.params).length > 0 ? config.params : '<none>');
+            console.log('Timestamp:', new Date().toISOString());
+            console.groupEnd();
         }
-        if (config.params) {
-            console.log('🔍 Query Params:', config.params);
-        }
-        console.log('⏰ Timestamp:', new Date().toISOString());
-        console.groupEnd();
 
         return config;
     },
     (error) => {
-        console.error('❌ Request Error:', error);
+        console.error('Request Error:', error);
         return Promise.reject(error);
     }
 );
@@ -45,29 +45,28 @@ api.interceptors.request.use(
 // Interceptor per gestire errori globali e logging delle risposte
 api.interceptors.response.use(
     (response) => {
-        // Log della risposta di successo
-        console.group(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`);
-        console.log('📊 Status:', response.status, response.statusText);
-        console.log('📦 Response Data:', response.data);
-        console.log('⏰ Timestamp:', new Date().toISOString());
-        console.log('⏱️ Duration:', response.config.headers ? 'Request completed' : '');
-        console.groupEnd();
+        if (import.meta.env.DEV) {
+            console.group(`API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`);
+            console.log('Status:', response.status, response.statusText);
+            const fullUrl = new URL(response.config.url || '', response.config.baseURL || 'http://localhost').toString();
+            console.log('Full URL:', fullUrl);
+            console.log('Response Data:', response.data);
+            console.log('Timestamp:', new Date().toISOString());
+            console.groupEnd();
+        }
 
         return response;
     },
     (error: AxiosError<ApiResponse<ErrorResponse>>) => {
-        // Log dettagliato dell'errore
-        console.group(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
-        console.error('🔴 Error Status:', error.response?.status);
-        console.error('🔴 Error Message:', error.response?.data?.message || error.message);
-        console.error('🔴 Error Data:', error.response?.data);
-        console.error('🔴 Full Error:', error);
-        console.log('⏰ Timestamp:', new Date().toISOString());
+        console.group(`API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
+        console.error('Error Status:', error.response?.status);
+        console.error('Error Message:', error.response?.data?.message || error.message);
+        console.error('Error Data:', error.response?.data);
+        console.error('Full Error:', error);
+        console.log('Timestamp:', new Date().toISOString());
         console.groupEnd();
 
         if (error.response?.status === 401) {
-            // Token scaduto o non valido
-            console.warn('⚠️ Unauthorized - Redirecting to login...');
             localStorage.removeItem('authToken');
             window.location.href = '/login';
         }

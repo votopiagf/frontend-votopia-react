@@ -21,6 +21,7 @@ export interface UserUpdate {
     resetPassword?: boolean;
     addLists?: number[];
     removeLists?: number[];
+    rolesId?: number[]; // Per aggiornare i ruoli
 }
 
 export interface UserDetail {
@@ -53,4 +54,16 @@ export interface UserState {
 export const displayNameFromDetail = (u: UserDetail): string => {
     const full = `${u.name ?? ''} ${u.surname ?? ''}`.trim();
     return full || u.email;
+};
+
+// --- Nuova util: genera iniziali da name + surname ---
+export const initialsFromDetail = (u: UserDetail | UserSummary | { name?: string; surname?: string; email?: string }): string => {
+    const name = 'name' in u ? u.name ?? '' : '';
+    const surname = 'surname' in u ? u.surname ?? '' : '';
+    const email = 'email' in u ? u.email ?? '' : '';
+    const full = `${name} ${surname}`.trim() || email || '';
+    if (!full) return '';
+    const parts = full.split(/\s+/);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };

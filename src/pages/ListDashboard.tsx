@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { ActionButton } from "@/components/ui/action-button";
 import { listsService } from "@/services/lists.service";
-import { roleService } from "@/services/roles.service";
+import { rolesService } from "@/services/roles.service";
 import { filesService } from "@/services/files.service";
 import type { ListDetail } from "@/pages/Lists";
 
@@ -65,7 +65,7 @@ const ListDashboard: React.FC<Props> = ({ list, listId, onBack }) => {
 
                 if (fetchedList) {
                     // fetch related counts and recent items
-                    const [allRoles, allFiles] = await Promise.all([roleService.getAll(), filesService.getAll()]);
+                    const [allRoles, allFiles] = await Promise.all([rolesService.getAll(), filesService.getAll()]);
                     const {length, slice} = allRoles.filter((r: any) => r.list && r.list.id === fetchedList!.id);
                     const {length: length1, sort} = allFiles.filter((f: any) => f.list && f.list.id === fetchedList!.id);
 
