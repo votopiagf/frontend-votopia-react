@@ -8,6 +8,7 @@ import type {
     ListOptionDto,
     RoleOptionDto
 } from '@/types/dtos/user.dto';
+import { isDev } from '@/lib/env';
 
 // ============================================================================
 // TIPI INTERNI PER LA UI
@@ -138,6 +139,7 @@ export function useUsers(): UseUsersReturn {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
     const [selectedListId, setSelectedListId] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     // Initialization data
     const [screenInitData, setScreenInitData] = useState<UsersScreenInitDto | null>(null);
@@ -145,19 +147,33 @@ export function useUsers(): UseUsersReturn {
     const [availableOrgRoles, setAvailableOrgRoles] = useState<RoleOptionDto[]>([]);
     const [availableListRoles, setAvailableListRoles] = useState<RoleOptionDto[]>([]);
 
+    // helper: current user id from localStorage
+    const getCurrentUserId = (): string | null => {
+        try {
+            const raw = localStorage.getItem('user');
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed?.id ? String(parsed.id) : null;
+        } catch {
+            return null;
+        }
+    };
+
     // Fetch screen initialization data
     const fetchScreenInitialization = useCallback(async () => {
         try {
+            setError(null);
             const data = await userService.getUsersScreenInitialization(selectedListId ?? undefined);
-            if (import.meta.env.DEV) {
+            if (isDev()) {
                 console.log('screenInitData:', data);
             }
             setScreenInitData(data);
             setAvailableLists(data?.availableLists ?? []);
             setAvailableOrgRoles(data?.availableOrgRoles ?? []);
             setAvailableListRoles(data?.availableListRoles ?? []);
-        } catch (e) {
+        } catch (e: any) {
             console.error('Errore fetch inizializzazione schermata:', e);
+            setError(e?.message || String(e));
         }
     }, [selectedListId]);
 
@@ -175,17 +191,24 @@ export function useUsers(): UseUsersReturn {
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         try {
+            setError(null);
             const data = await userService.getAll(selectedListId ?? undefined);
-            if (import.meta.env.DEV) {
+            if (isDev()) {
                 console.log('users fetched:', data.length, 'selectedListId:', selectedListId);
             }
             const normalized = data.map(normalizeUser);
-            setUsers(normalized);
-            if (!selectedUserId && normalized.length > 0) {
-                setSelectedUserId(normalized[0].id);
+
+            // Escludi l'utente corrente
+            const currentId = getCurrentUserId();
+            const filtered = currentId ? normalized.filter(u => u.id !== currentId) : normalized;
+
+            setUsers(filtered);
+            if (!selectedUserId && filtered.length > 0) {
+                setSelectedUserId(filtered[0].id);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('Errore fetch utenti:', e);
+            setError(e?.message || String(e));
         } finally {
             setLoading(false);
         }
@@ -449,5 +472,6 @@ export function useUsers(): UseUsersReturn {
         deleteUsers,
         resetPassword,
         downloadExcel,
+        error,
     };
 }

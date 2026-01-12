@@ -5,8 +5,6 @@ import { Input } from '@/components/ui/input';
 import {ActionButton} from '@/components/ui/action-button';
 import authService from '@/services/auth.service';
 import type {Organization} from '@/types/auth.types';
-import { AxiosError } from 'axios';
-import type {ErrorResponse} from '@/types/common.types';
 
 // Importa loghi
 import votopiaIcon from '@/assets/icon.png';
@@ -31,21 +29,16 @@ export default function Login() {
         setIsLoading(true);
 
         try {
-            const response = await authService.checkOrganization(organizationCode);
-
-            if (response.success) {
-                setOrganization(response.data);
-                setShowCredentials(true);
-                setEmail('');
-                setPassword('');
-            } else {
-                setError(response.message || 'Organizzazione non trovata');
-            }
-        } catch (err) {
-            const axiosError = err as AxiosError<ErrorResponse>;
-            setError(
-                axiosError.response?.data?.message || 'Errore durante la verifica dell\'organizzazione'
-            );
+            // Il servizio ora restituisce direttamente l'Organization oppure lancia un errore
+            const org = await authService.checkOrganization(organizationCode);
+            setOrganization(org);
+            setShowCredentials(true);
+            setEmail('');
+            setPassword('');
+        } catch (err: any) {
+            // L'API client normalizza gli errori in { message, status, errors }
+            const message = err?.message || 'Organizzazione non trovata';
+            setError(message);
         } finally {
             setIsLoading(false);
         }
@@ -58,19 +51,17 @@ export default function Login() {
         setIsLoading(true);
 
         try {
-            const response = await authService.login(email, password, organizationCode);
+            const result = await authService.login(email, password, organizationCode);
 
-            if (response.success) {
-                // Redirect alla dashboard
+            // Se il backend ha restituito il token, procedi
+            if (result?.token) {
                 navigate('/users');
             } else {
-                setError(response.message || 'Credenziali non valide');
+                setError('Credenziali non valide');
             }
-        } catch (err) {
-            const axiosError = err as AxiosError<ErrorResponse>;
-            setError(
-                axiosError.response?.data?.message || 'Errore durante il login'
-            );
+        } catch (err: any) {
+            const message = err?.message || 'Errore durante il login';
+            setError(message);
         } finally {
             setIsLoading(false);
         }

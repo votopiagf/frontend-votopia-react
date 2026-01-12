@@ -5,6 +5,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import { getApiUrl } from '@/lib/env';
 
 export interface ApiErrorResponse {
     success: false;
@@ -41,7 +42,7 @@ export class ApiServiceError extends Error {
 export abstract class BaseApiService {
     protected readonly client: AxiosInstance;
 
-    constructor(baseURL: string = import.meta.env.VITE_API_URL) {
+    constructor(baseURL: string = getApiUrl()) {
         this.client = axios.create({
             baseURL,
             timeout: 30000,
@@ -82,4 +83,3 @@ export abstract class BaseApiService {
         throw new ApiServiceError(status, message, details);
     }
 }
-

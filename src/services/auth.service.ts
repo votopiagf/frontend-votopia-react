@@ -4,22 +4,18 @@ import type {
     LoginPayload,
     LoginResponse,
 } from '@/types/auth.types';
-import type {ApiResponse} from '@/types/api.types';
 
 class AuthService {
     // Verifica esistenza organizzazione
     async checkOrganization(
         organization_code: string
-    ): Promise<ApiResponse<Organization>> {
+    ): Promise<Organization> {
         console.log('🏢 Checking organization with code:', organization_code);
-        const response = await api.get<ApiResponse<Organization>>(
-            '/api/organizations/by-code/',
-            {
-                params: {organization_code}
-            }
-        );
-        console.log('✅ Organization check result:', response.data.success ? 'Found' : 'Not found');
-        return response.data;
+        const data = await api.get<Organization>('/api/organizations/by-code/', {
+            params: {organization_code}
+        });
+        console.log('✅ Organization check result:', data ? 'Found' : 'Not found');
+        return data as unknown as Organization;
     }
 
     // Login con credenziali
@@ -27,38 +23,28 @@ class AuthService {
         email: string,
         password: string,
         codeOrg: string
-    ): Promise<ApiResponse<LoginResponse>> {
+    ): Promise<LoginResponse> {
         console.log('🔐 Attempting login for user:', email, 'in organization:', codeOrg);
         const payload: LoginPayload = { email, password, codeOrg };
-        const response = await api.post<ApiResponse<LoginResponse>>(
-            '/api/auth/login/',
-            payload
-        );
+        const data = await api.post<LoginResponse>('/api/auth/login/', payload);
 
         // Salva token in localStorage
-        if (response.data.success) {
+        const loginData = data as unknown as LoginResponse;
+
+        if (loginData?.token) {
             console.log('✅ Login successful!');
-            console.log('💡 Full login response:', response.data);
-            console.log('Response data:', response.data.data);
-
-            const data = response.data.data;
-
-            if (data?.token) {
-                localStorage.setItem('authToken', data.token);
-            }
-
-            if (data?.userSummaryDto) {
-                localStorage.setItem('user', JSON.stringify(data.userSummaryDto));
-                console.log('✅ User logged in:', data.userSummaryDto.email);
-            } else {
-                console.warn('⚠️ User summary is missing in response!');
-                localStorage.removeItem('user'); // pulizia sicura
-            }
-        } else {
-            console.error('❌ Login failed:', response.data.message);
+            localStorage.setItem('authToken', loginData.token);
         }
 
-        return response.data;
+        if (loginData?.userSummaryDto) {
+            localStorage.setItem('user', JSON.stringify(loginData.userSummaryDto));
+            console.log('✅ User logged in:', loginData.userSummaryDto.email);
+        } else {
+            console.warn('⚠️ User summary is missing in login response!');
+            localStorage.removeItem('user'); // pulizia sicura
+        }
+
+        return loginData;
     }
 
     // Logout
