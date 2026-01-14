@@ -1,20 +1,20 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from '@/pages/Login';
-import Dashboard from '@/pages/test/Dashboard';
-import Profile from '@/pages/test/Profile';
-import Votazioni from '@/pages/test/Votazioni';
-import Utenti from '@/pages/test/Utenti';
-import Statistiche from '@/pages/test/Statistiche';
-import Impostazioni from '@/pages/test/Impostazioni';
-import NotFound from '@/pages/NotFound';
+import Dashboard from '@/test/pages/test/Dashboard';
+import Profile from '@/test/pages/test/Profile';
+import Votazioni from '@/test/pages/test/Votazioni';
+import Utenti from '@/test/pages/test/Utenti';
+import Statistiche from '@/test/pages/test/Statistiche';
+import Impostazioni from '@/test/pages/test/Impostazioni';
+import NotFound from '@/test/pages/NotFound';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import Users from '@/pages/Users';
-import authService from '@/services/auth.service';
-import Roles from "@/pages/Roles";
-import Lists from "@/pages/Lists";
-import Files from "@/pages/Files";
-import ListsMenu from "@/pages/ListsMenu";
-import ListDashboard from "@/pages/ListDashboard";
+import Users from '@/test/pages/Users';
+import authService from '@/test/services/auth.service';
+import Roles from "@/test/pages/Roles";
+import Lists from "@/test/pages/Lists";
+import Files from "@/test/pages/Files";
+import ListsMenu from "@/test/pages/ListsMenu";
+import ListDashboard from "@/test/pages/ListDashboard";
+import LoginPage from "@/pages/Login.tsx";
 
 
 function App() {
@@ -36,7 +36,7 @@ function App() {
                 />
 
                 {/* Public routes */}
-                <Route path="/login" element={<Login />} />
+                <Route path="/login" element={<LoginPage/>} />
 
                 {/* Protected routes */}
                 <Route

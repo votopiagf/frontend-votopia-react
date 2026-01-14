@@ -1,69 +1,73 @@
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import type { FormEvent } from "react";
-import type { OrganizationBasicInfo } from "@/types/organization.types.ts";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Building2, Mail, Lock, ArrowRight, ArrowLeft, LogIn } from 'lucide-react';
+import { Input } from '@/test/components/ui/input.tsx';
+import {ActionButton} from '@/test/components/ui/action-button.tsx';
+import authService from '@/test/services/auth.service.ts';
+import type {Organization} from '@/test/types/auth.types.ts';
 
-import type { ApiError as FrontendApiError } from "@/types/common.types.ts";
-
+// Importa loghi
 import votopiaIcon from '@/assets/icon.png';
-import votopiaText from "@/assets/icon_text.png";
-import { Input } from "@/components/ui/input.tsx";
-import { ArrowLeft, ArrowRight, Building2, Lock, LogIn, Mail } from "lucide-react";
-import { ActionButton } from "@/components/ui/action-button.tsx";
-import authService from "@/services/auth.service.ts";
-import {LoginResponse} from "@/types/dto/login.dto.ts";
+import votopiaText from '@/assets/icon_text.png';
 
-export default function LoginPage() {
+export default function Login() {
     const navigate = useNavigate();
     const [showCredentials, setShowCredentials] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [organizationCode, setOrganizationCode] = useState("");
-    const [organization, setOrganization] = useState<OrganizationBasicInfo | null>(null);
-    const [password, setPassword] = useState("");
-    const [email, setEmail] = useState("");
+    // Form state
+    const [organizationCode, setOrganizationCode] = useState('');
+    const [organization, setOrganization] = useState<Organization | null>(null);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
 
-
-    const handleOrganizationCheck = async (e: FormEvent) => {
+    // Gestione verifica organizzazione
+    const handleOrganizationCheck = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setIsLoading(true);
 
         try {
-            const org: OrganizationBasicInfo = await authService.checkOrganization(organizationCode);
+            // Il servizio ora restituisce direttamente l'Organization oppure lancia un errore
+            const org = await authService.checkOrganization(organizationCode);
             setOrganization(org);
             setShowCredentials(true);
             setEmail('');
             setPassword('');
-        } catch (err: unknown) {
-            const apiErr = err as FrontendApiError;
-            setError(apiErr.message);
+        } catch (err: any) {
+            // L'API client normalizza gli errori in { message, status, errors }
+            const message = err?.message || 'Organizzazione non trovata';
+            setError(message);
         } finally {
             setIsLoading(false);
         }
-    }
+    };
 
-    const handleLogin = async (e: FormEvent) => {
+    // Gestione login
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setIsLoading(true);
 
         try {
-            const result: LoginResponse = await authService.login(email, password, organizationCode);
+            const result = await authService.login(email, password, organizationCode);
+
+            // Se il backend ha restituito il token, procedi
             if (result?.token) {
-                navigate("/dashboard");
+                navigate('/users');
             } else {
-                setError('Credenziali non valide.');
+                setError('Credenziali non valide');
             }
-        } catch (err: unknown) {
-            const apiErr = err as FrontendApiError;
-            setError(apiErr.message);
+        } catch (err: any) {
+            const message = err?.message || 'Errore durante il login';
+            setError(message);
         } finally {
             setIsLoading(false);
         }
-    }
+    };
 
+    // Torna indietro
     const handleBack = () => {
         setShowCredentials(false);
         setError(null);
